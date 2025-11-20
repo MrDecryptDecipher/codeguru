@@ -3,7 +3,7 @@ import React from 'react'
 export const DragHandle: React.FC = () => {
     return (
         <div
-            className="drag-handle w-full h-8 bg-gradient-to-r from-gray-800/90 to-gray-900/90 backdrop-blur-sm flex items-center justify-between px-4 rounded-t-lg border-b border-gray-700/50"
+            className="drag-handle w-full h-8 bg-gradient-to-r from-gray-900/95 to-black/95 backdrop-blur-sm flex items-center justify-between px-4 rounded-t-lg border-b border-gray-800/70"
             style={{
                 // @ts-ignore - Webkit specific property
                 WebkitAppRegion: 'drag',

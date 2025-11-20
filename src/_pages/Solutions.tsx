@@ -67,8 +67,8 @@ const SolutionSection = ({
         </div>
       </div>
     ) : (
-      <>
-        <div className="w-full max-h-[400px] overflow-y-auto rounded-md scrollbar-dark">
+      <div className="space-y-2">
+        <div className="w-full max-h-[500px] overflow-y-auto rounded-md scrollbar-dark bg-[#282a36]">
           <SyntaxHighlighter
             showLineNumbers
             language="python"
@@ -77,19 +77,18 @@ const SolutionSection = ({
               maxWidth: "100%",
               margin: 0,
               padding: "1rem",
-              whiteSpace: "pre-wrap",
-              wordBreak: "normal",
-              overflowWrap: "break-word"
+              background: "transparent"
             }}
+            wrapLines={true}
             wrapLongLines={true}
           >
             {content as string}
           </SyntaxHighlighter>
         </div>
-        <div className="text-xs text-green-400 font-medium pt-2 text-center">
+        <div className="text-xs text-green-400 font-bold pt-3 pb-1 text-center bg-gray-900/50 rounded-md border border-green-500/30">
           ✓ DONE
         </div>
-      </>
+      </div>
     )}
   </div>
 )
