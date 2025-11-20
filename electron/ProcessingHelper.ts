@@ -70,7 +70,7 @@ function readOpenRouterConfig(): { apiKey: string; models: string[] } | null {
 
     const content = fs.readFileSync(configPath, "utf-8");
     const lines = content.split("\n").map(line => line.trim()).filter(line => line && !line.startsWith("#"));
-    
+
     let apiKey = "";
     const models: string[] = [];
 
@@ -114,7 +114,7 @@ export class ProcessingHelper {
     this.conversationManager = new ConversationManager()
     this.cacheManager = CacheManager.getInstance()
     this.requestQueue = new RequestQueue()
-    
+
     // Initialize OCR if enabled
     try {
       this.ocrHelper = new OCRHelper()
@@ -122,7 +122,7 @@ export class ProcessingHelper {
     } catch (error) {
       logger.warn('Failed to initialize OCR helper', { error })
     }
-    
+
     // Priority: OpenRouter > Ollama > Gemini
     // Check if user wants to use OpenRouter (prefer env, fallback to file)
     const envOpenRouterConfig = readOpenRouterEnvConfig()
@@ -131,7 +131,7 @@ export class ProcessingHelper {
     ProcessingHelper.openRouterConfig = openRouterConfig // Store for later use
     const useOpenRouter =
       process.env.USE_OPENROUTER !== "false" && openRouterConfig !== null;
-    
+
     if (useOpenRouter && openRouterConfig) {
       console.log(`[ProcessingHelper] Initializing with OpenRouter (${openRouterConfig.models.length} models)`)
       this.llmHelper = new LLMHelper(
@@ -147,7 +147,7 @@ export class ProcessingHelper {
       const useOllama = process.env.USE_OLLAMA === "true"
       const ollamaModel = process.env.OLLAMA_MODEL // Don't set default here, let LLMHelper auto-detect
       const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434"
-      
+
       if (useOllama) {
         console.log("[ProcessingHelper] Initializing with Ollama")
         this.llmHelper = new LLMHelper(undefined, true, ollamaModel, ollamaUrl)
@@ -197,10 +197,10 @@ export class ProcessingHelper {
       mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.INITIAL_START)
       this.appState.setView("solutions")
       this.currentProcessingAbortController = new AbortController()
-      
+
       // Create conversation for this processing session
       const conversationId = this.conversationManager.createConversation('Screenshot Processing')
-      
+
       try {
         // Try OCR first if available
         let ocrText = '';
@@ -208,15 +208,15 @@ export class ProcessingHelper {
           try {
             const ocrResult = await this.ocrHelper.extractTextEnhanced(lastPath);
             ocrText = ocrResult.text;
-            logger.info('OCR extraction completed', { 
+            logger.info('OCR extraction completed', {
               confidence: ocrResult.confidence,
-              textLength: ocrText.length 
+              textLength: ocrText.length
             });
-            
+
             // Add OCR text to conversation
             if (ocrText) {
               await this.conversationManager.addMessage('system', `OCR extracted text: ${ocrText}`, {
-                type: 'ocr'
+                // type: 'ocr' - removed as it's not in the type definition
               });
             }
           } catch (ocrError) {
@@ -244,17 +244,17 @@ export class ProcessingHelper {
           validation_type: "manual",
           difficulty: "custom"
         };
-        
+
         // Add to conversation
         await this.conversationManager.addMessage('user', 'Screenshot processed', {
-          screenshots: [lastPath],
-          ocrText: ocrText || undefined
+          // screenshots: [lastPath],
+          // ocrText: ocrText || undefined
         });
         await this.conversationManager.addMessage('assistant', problemInfo.problem_statement, {
           model: this.llmHelper.getCurrentModel(),
           provider: this.llmHelper.getCurrentProvider()
         });
-        
+
         mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.PROBLEM_EXTRACTED, problemInfo);
         this.appState.setProblemInfo(problemInfo);
 
@@ -279,7 +279,7 @@ export class ProcessingHelper {
           {
             model: this.llmHelper.getCurrentModel(),
             provider: this.llmHelper.getCurrentProvider(),
-            type: 'solution'
+            // type: 'solution'
           }
         );
 

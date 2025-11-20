@@ -42,9 +42,9 @@ interface ElectronAPI {
   onRealtimeSuggestion: (callback: (data: any) => void) => () => void
   onRealtimeStatus: (callback: (data: any) => void) => () => void
   onRealtimeError: (callback: (message: string) => void) => () => void
-  processScreenshots: () => Promise<{ success: boolean; error?: string }>
+  onRealtimeError: (callback: (message: string) => void) => () => void
   quitApp: () => Promise<void>
-  
+
   // LLM Model Management
   getCurrentLlmConfig: () => Promise<{ provider: "ollama" | "gemini" | "openrouter"; model: string; isOllama: boolean; isOpenRouter?: boolean }>
   getAvailableOllamaModels: () => Promise<string[]>
@@ -53,13 +53,13 @@ interface ElectronAPI {
   switchToGemini: (apiKey?: string) => Promise<{ success: boolean; error?: string }>
   switchToOpenRouter: (apiKey: string, models: string[]) => Promise<{ success: boolean; error?: string }>
   testLlmConnection: () => Promise<{ success: boolean; error?: string }>
-  
+
   // Clipboard Monitoring
   startClipboardMonitor: () => Promise<{ success: boolean; error?: string }>
   stopClipboardMonitor: () => Promise<{ success: boolean; error?: string }>
   getClipboardStatus: () => Promise<{ active: boolean }>
   onCodeDetected: (callback: (data: { isCode: boolean; language: string | null; confidence: number; snippet: string }) => void) => () => void
-  
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
@@ -221,7 +221,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("realtime-error", subscription)
   },
   quitApp: () => ipcRenderer.invoke("quit-app"),
-  
+
   // LLM Model Management
   getCurrentLlmConfig: () => ipcRenderer.invoke("get-current-llm-config"),
   getAvailableOllamaModels: () => ipcRenderer.invoke("get-available-ollama-models"),
@@ -230,7 +230,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   switchToGemini: (apiKey?: string) => ipcRenderer.invoke("switch-to-gemini", apiKey),
   switchToOpenRouter: (apiKey: string, models: string[]) => ipcRenderer.invoke("switch-to-openrouter", apiKey, models),
   testLlmConnection: () => ipcRenderer.invoke("test-llm-connection"),
-  
+
   // Clipboard Monitoring
   startClipboardMonitor: () => ipcRenderer.invoke("clipboard-start"),
   stopClipboardMonitor: () => ipcRenderer.invoke("clipboard-stop"),
@@ -240,6 +240,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("code-detected", subscription)
     return () => ipcRenderer.removeListener("code-detected", subscription)
   },
-  
+
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args)
 } as ElectronAPI)

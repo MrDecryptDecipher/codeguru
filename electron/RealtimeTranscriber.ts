@@ -55,7 +55,8 @@ export class RealtimeTranscriber extends EventEmitter {
 
     this.dg = new Deepgram(apiKey)
 
-    this.liveClient = await this.dg.transcription.live({
+    // @ts-ignore - Deepgram SDK v3/v4 uses listen.live
+    this.liveClient = await this.dg.listen.live({
       model: 'nova-2',
       interim_results: this.config.interimResults,
       language: this.config.language,

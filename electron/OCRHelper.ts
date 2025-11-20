@@ -60,30 +60,29 @@ export class OCRHelper {
     oem?: number; // OCR Engine mode
   }): Promise<OCRResult> {
     const startTime = Date.now();
-    
+
     try {
       await this.initialize();
-      
+
       if (!this.worker) {
         throw new Error('OCR worker not initialized');
       }
 
       // Set language if specified
       if (options?.language && options.language !== 'eng') {
-        await this.worker.loadLanguage(options.language);
-        await this.worker.initialize(options.language);
+        await (this.worker as any).reinitialize(options.language);
       }
 
       // Set page segmentation mode if specified
       if (options?.psm !== undefined) {
         await this.worker.setParameters({
-          tessedit_pageseg_mode: options.psm.toString()
+          tessedit_pageseg_mode: options.psm.toString() as any
         });
       }
 
       // Perform OCR
       const { data } = await this.worker.recognize(imagePath);
-      
+
       const processingTime = Date.now() - startTime;
 
       // Extract word-level information
@@ -118,10 +117,10 @@ export class OCRHelper {
     psm?: number;
   }): Promise<OCRResult> {
     const startTime = Date.now();
-    
+
     try {
       await this.initialize();
-      
+
       if (!this.worker) {
         throw new Error('OCR worker not initialized');
       }
@@ -131,20 +130,21 @@ export class OCRHelper {
 
       // Set language if specified
       if (options?.language && options.language !== 'eng') {
-        await this.worker.loadLanguage(options.language);
-        await this.worker.initialize(options.language);
+        // In v5, we might need to recreate worker or use reinitialize if supported
+        // Casting to any to avoid type issues with specific worker version
+        await (this.worker as any).reinitialize(options.language);
       }
 
       // Set page segmentation mode if specified
       if (options?.psm !== undefined) {
         await this.worker.setParameters({
-          tessedit_pageseg_mode: options.psm.toString()
+          tessedit_pageseg_mode: options.psm.toString() as any
         });
       }
 
       // Perform OCR
       const { data } = await this.worker.recognize(imageBuffer);
-      
+
       const processingTime = Date.now() - startTime;
 
       const words = data.words.map(word => ({
@@ -176,20 +176,19 @@ export class OCRHelper {
   public async detectLanguage(imagePath: string): Promise<string> {
     try {
       await this.initialize();
-      
+
       if (!this.worker) {
         throw new Error('OCR worker not initialized');
       }
 
       // Try common languages
       const languages = ['eng', 'spa', 'fra', 'deu', 'chi_sim', 'jpn', 'kor'];
-      
+
       for (const lang of languages) {
         try {
-          await this.worker.loadLanguage(lang);
-          await this.worker.initialize(lang);
+          await (this.worker as any).reinitialize(lang);
           const { data } = await this.worker.recognize(imagePath);
-          
+
           // If we get reasonable confidence, assume this is the language
           if (data.confidence && data.confidence > 50) {
             return lang;
@@ -214,7 +213,7 @@ export class OCRHelper {
     try {
       // Try different PSM modes for better accuracy
       const psmModes = [6, 3, 11]; // 6: uniform block, 3: fully automatic, 11: sparse text
-      
+
       let bestResult: OCRResult | null = null;
       let bestConfidence = 0;
 
