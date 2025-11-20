@@ -134,8 +134,8 @@ const DEFAULT_CONFIG: UserConfig = {
       language: 'en-US',
       sampleRate: 16000,
       interimResults: true,
-      systemDevice: 'virtual-audio-capturer',
-      microphoneDevice: 'default',
+      systemDevice: 'CABLE Output (VB-Audio Virtual Cable)',
+      microphoneDevice: 'Microphone (USB Audio Device)',
       includeSystemAudio: true
     },
     responder: {
