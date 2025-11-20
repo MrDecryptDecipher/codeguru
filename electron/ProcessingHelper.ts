@@ -22,11 +22,20 @@ const isDev = process.env.NODE_ENV === "development"
 const isDevTest = process.env.IS_DEV_TEST === "true"
 const MOCK_API_WAIT_TIME = Number(process.env.MOCK_API_WAIT_TIME) || 500
 
+// Ensure .env is loaded from project root
+const envPath = path.join(process.cwd(), ".env")
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath })
+} else {
+  dotenv.config() // Fallback to default
+}
+
 function readOpenRouterEnvConfig(): { apiKey: string; models: string[] } | null {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim()
-  const modelsRaw = process.env.OPENROUTER_MODELS
+  // Use default models if not provided in env
+  const modelsRaw = process.env.OPENROUTER_MODELS || "google/gemini-2.0-flash-exp:free,google/gemini-2.0-pro-exp-02-05:free,google/gemini-2.0-flash-thinking-exp:free,deepseek/deepseek-r1:free,qwen/qwen-vl-plus:free,qwen/qwen-2.5-coder-32b-instruct:free,meta-llama/llama-3.3-70b-instruct:free,nvidia/llama-3.1-nemotron-70b-instruct:free"
 
-  if (!apiKey || !modelsRaw) {
+  if (!apiKey) {
     return null
   }
 
