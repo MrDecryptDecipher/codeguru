@@ -67,7 +67,7 @@ const SolutionSection = ({
         </div>
       </div>
     ) : (
-      <div className="w-full">
+      <div className="w-full max-h-[400px] overflow-y-auto rounded-md">
         <SyntaxHighlighter
           showLineNumbers
           language="python"

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import Solutions from "./_pages/Solutions"
 import { QueryClient, QueryClientProvider } from "react-query"
 import { SolvePrompt } from "./components/SolvePrompt"
+import { DragHandle } from "./components/DragHandle"
 
 declare global {
   interface Window {
@@ -242,6 +243,7 @@ const App: React.FC = () => {
     <div ref={containerRef} className="min-h-0">
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
+          <DragHandle />
           {view === "queue" ? (
             <Queue setView={setView} />
           ) : view === "solutions" ? (
