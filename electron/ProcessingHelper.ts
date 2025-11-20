@@ -394,6 +394,7 @@ export class ProcessingHelper {
       this.appState.setProblemInfo(problemInfo);
 
       // Generate solution
+      console.log("[ProcessingHelper] Generating solution...");
       const rawSolution = await ErrorHandler.executeWithProtection(
         'solution-generation',
         () => this.llmHelper.generateSolution(problemInfo),
@@ -403,10 +404,13 @@ export class ProcessingHelper {
           retryableErrors: [Error]
         }
       );
+      console.log("[ProcessingHelper] Raw solution received:", JSON.stringify(rawSolution, null, 2));
 
       const normalizedSolution = rawSolution?.solution
         ? rawSolution
         : { solution: rawSolution };
+
+      console.log("[ProcessingHelper] Normalized solution:", JSON.stringify(normalizedSolution, null, 2));
 
       await this.conversationManager.addMessage(
         'assistant',
@@ -417,10 +421,12 @@ export class ProcessingHelper {
         }
       );
 
+      console.log("[ProcessingHelper] Sending SOLUTION_SUCCESS to frontend");
       mainWindow.webContents.send(
         this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
         normalizedSolution
       );
+      console.log("[ProcessingHelper] SOLUTION_SUCCESS sent");
 
     } catch (error: any) {
       const userMessage = ErrorHandler.getUserFriendlyError(error);
