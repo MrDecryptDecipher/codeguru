@@ -369,17 +369,32 @@ export class OpenRouterHelper {
    * Generate solution with orchestration
    */
   public async generateSolution(problemInfo: any): Promise<any> {
-    const prompt = `You are Wingman AI, a helpful, proactive assistant. Given this problem or situation:\n${JSON.stringify(problemInfo, null, 2)}\n\nPlease provide your response in the following JSON format:\n{
-  "solution": {
-    "code": "The code or main answer here.",
-    "problem_statement": "Restate the problem or situation.",
-    "context": "Relevant background/context.",
-    "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
-    "reasoning": "Explanation of why these suggestions are appropriate."
-  }
-}\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`;
+    const prompt = `You are an expert coding assistant specialized in solving LeetCode-style problems. 
 
-    const result = await this.orchestrateRequest(prompt, "problem-solving", { max_tokens: 4096 });
+Given this problem:
+${JSON.stringify(problemInfo, null, 2)}
+
+CRITICAL REQUIREMENTS:
+1. You MUST provide complete, executable Python code
+2. The code field MUST contain ONLY valid Python code - NO explanations, NO markdown
+3. The code must be ready to paste directly into LeetCode
+4. Include proper function definitions with correct parameter names
+5. Do NOT wrap the code in markdown code blocks (no \`\`\`python)
+
+Provide your response in this exact JSON format:
+{
+  "solution": {
+    "code": "def functionName(params):\\n    # actual working code here\\n    return result",
+    "problem_statement": "Brief restatement of the problem",
+    "context": "Key insights or approach used",
+    "suggested_responses": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+    "reasoning": "Brief explanation of the algorithm and time/space complexity"
+  }
+}
+
+IMPORTANT: The "code" field must contain ONLY executable Python code, nothing else. No explanatory text.`;
+
+    const result = await this.orchestrateRequest(prompt, "coding", { max_tokens: 4096 });
 
     // Clean and parse JSON response
     let text = result.response;
