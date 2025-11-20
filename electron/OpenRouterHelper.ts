@@ -369,47 +369,50 @@ export class OpenRouterHelper {
    * Generate solution with orchestration
    */
   public async generateSolution(problemInfo: any): Promise<any> {
-    const prompt = `You are a World-Class Principal Engineer and Polymath with mastery in all fields of Computer Science.
+    const prompt = `You are a World-Class Principal Engineer and Polymath.
     
-YOUR EXPERTISE INCLUDES (BUT IS NOT LIMITED TO):
-- **Algorithms & Data Structures**: LeetCode Hard/Competitive Programming level. You ALWAYS optimize for O(n) or O(log n) time and O(1) space where possible.
-- **Blockchain & Cryptography**: Solidity, Rust, Hyperledger, ZK-Rollups, DeFi protocols, Elliptic Curve Cryptography.
-- **System Design**: Microservices, Distributed Systems, AWS/GCP/Azure architecture, High Scalability.
-- **Full Stack**: React, TypeScript, Node.js, Next.js, Python, Go, Java, Rust.
-- **AI/ML**: PyTorch, TensorFlow, LLMs, RAG, Computer Vision.
+**YOUR GOAL**: Provide a **100% CORRECT, ROBUST, and OPTIMIZED** solution.
+**CURRENT STATUS**: The user is frustrated because previous solutions had Runtime Errors (KeyError, AttributeError).
+**MANDATE**: You must "Deep Research" and "Verify" before writing a single line of code.
 
-YOUR MISSION:
-Given the problem below, provide the **absolute best-in-class solution**. 
-- For Coding Problems: It MUST be the most optimal, clean, and production-ready code.
-- For System Design/Theory: It MUST be deep, architectural, and practical.
-
-PROBLEM / CONTEXT:
+PROBLEM:
 ${JSON.stringify(problemInfo, null, 2)}
 
-CRITICAL OUTPUT REQUIREMENTS:
-1. **LeetCode Format**: The code MUST be wrapped in \`class Solution:\`.
-2. **Correct Method Name**: You MUST use the EXACT function name and parameter signature expected by LeetCode (e.g., \`maximumScore\`, \`twoSum\`). Do NOT use generic names like \`optimalSolution\`. Look at the problem description for the required signature.
-3. **Executable Code Only**: The "code" field must contain ONLY valid, executable Python code.
-   - NO markdown formatting (no \`\`\`python).
-   - NO explanations in the code field.
-4. **Optimization**: For DSA problems, you MUST use the most optimal algorithm (Time/Space Complexity).
-5. **Robustness**: Handle edge cases.
+---
 
-RESPONSE FORMAT (Strict JSON):
+### PHASE 1: DEEP RESEARCH & ANALYSIS (Internal Monologue)
+1.  **Understand**: What are the exact constraints? Edge cases (empty, max values, negatives)?
+2.  **Algorithm**: Select the optimal approach (Time/Space).
+3.  **Safety Check**: 
+    - DO NOT use complex one-liners (e.g., nested list comprehensions with side effects).
+    - DO NOT assume dictionary keys exist (use \`.get()\` or \`defaultdict\`).
+    - DO NOT access array indices without bounds checking.
+    - ENSURE method names match the problem description EXACTLY.
+
+### PHASE 2: IMPLEMENTATION RULES
+1.  **Class Structure**: Must be wrapped in \`class Solution:\`.
+2.  **Method Signature**: Use the EXACT method name from the problem.
+3.  **Readability**: Write clean, expanded code. No "code golf".
+4.  **Imports**: Import all necessary libraries (e.g., \`from typing import List, Optional\`, \`import collections\`, \`import math\`).
+
+---
+
+### RESPONSE FORMAT (Strict JSON)
+Return ONLY this JSON structure. The "reasoning" field is where you show your "Deep Research".
+
 {
   "solution": {
-    "code": "class Solution:\\n    def exactMethodName(self, arg1, arg2):\\n        # Highly optimized code here\\n        return result",
-    "problem_statement": "Concise, technical restatement of the problem.",
-    "context": "Key architectural decisions, patterns used (e.g., 'Sliding Window', 'Factory Pattern'), or domain context.",
+    "code": "import collections\\nfrom typing import List\\n\\nclass Solution:\\n    def exactMethodName(self, args):\\n        # Step 1: Validation\\n        if not args: return 0\\n        \\n        # Step 2: Logic (Expanded & Safe)\\n        result = 0\\n        for x in args:\\n            # Safe operations only\\n            pass\\n        return result",
+    "problem_statement": "Technical summary of the problem.",
+    "context": "Algorithm used (e.g., 'Dynamic Programming with Memoization').",
     "suggested_responses": [
-      "Step 1: [Actionable step]",
-      "Step 2: [Actionable step]"
+      "Step 1: Analyzed constraints...",
+      "Step 2: Selected O(n) approach...",
+      "Step 3: Verified edge cases..."
     ],
-    "reasoning": "Detailed analysis: Time Complexity O(?), Space Complexity O(?). Why this approach is superior to alternatives."
+    "reasoning": "DEEP RESEARCH:\\n1. Analysis: [Detailed analysis]\\n2. Edge Cases: [List edge cases]\\n3. Complexity: Time O(N), Space O(1).\\n4. Verification: Traced with input [x, y] -> result z."
   }
-}
-
-IMPORTANT: The "code" field is for the COMPILER/INTERPRETER. The "reasoning" field is for the ENGINEER. Keep them separate.`;
+}`;
 
     const result = await this.orchestrateRequest(prompt, "coding", { max_tokens: 4096 });
 
