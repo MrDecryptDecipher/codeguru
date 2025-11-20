@@ -203,6 +203,8 @@ export class RealtimeTranscriber extends EventEmitter {
     }
 
     // When multiple devices are provided we rely on dshow's ability to handle colon separated devices.
+    // Note: If 'virtual-audio-capturer' is not installed, this will fail.
+    // Users should install VB-Cable or similar, or configure 'Stereo Mix'.
     return ['-i', devices.join(':')]
   }
 }
