@@ -141,6 +141,14 @@ export class ProcessingHelper {
     const useOpenRouter =
       process.env.USE_OPENROUTER !== "false" && openRouterConfig !== null;
 
+    if (openRouterConfig) {
+      const source = envOpenRouterConfig ? "Environment Variables" : "openrouter.txt";
+      const maskedKey = openRouterConfig.apiKey ? `${openRouterConfig.apiKey.substring(0, 8)}...${openRouterConfig.apiKey.substring(openRouterConfig.apiKey.length - 4)}` : "undefined";
+      console.log(`[ProcessingHelper] Loaded OpenRouter config from: ${source}`);
+      console.log(`[ProcessingHelper] API Key (masked): ${maskedKey}`);
+      console.log(`[ProcessingHelper] Models count: ${openRouterConfig.models.length}`);
+    }
+
     if (useOpenRouter && openRouterConfig) {
       console.log(`[ProcessingHelper] Initializing with OpenRouter (${openRouterConfig.models.length} models)`)
       this.llmHelper = new LLMHelper(
