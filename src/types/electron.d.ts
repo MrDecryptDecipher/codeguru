@@ -26,6 +26,7 @@ export interface ElectronAPI {
   analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
   analyzeImageFile: (path: string) => Promise<{ text: string; timestamp: number }>
   processScreenshots: () => Promise<{ success: boolean; error?: string }>
+  processClipboardText: (text: string) => Promise<{ success: boolean; error?: string }>
   startRealtimeAssistant: () => Promise<{ success: boolean; error?: string }>
   stopRealtimeAssistant: () => Promise<{ success: boolean; error?: string }>
   getRealtimeStatus: () => Promise<{ active: boolean }>

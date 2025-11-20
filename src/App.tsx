@@ -45,6 +45,7 @@ declare global {
       analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
       analyzeImageFile: (path: string) => Promise<{ text: string; timestamp: number }>
       processScreenshots: () => Promise<{ success: boolean; error?: string }>
+      processClipboardText: (text: string) => Promise<{ success: boolean; error?: string }>
       startRealtimeAssistant: () => Promise<{ success: boolean; error?: string }>
       stopRealtimeAssistant: () => Promise<{ success: boolean; error?: string }>
       getRealtimeStatus: () => Promise<{ active: boolean }>
@@ -58,7 +59,7 @@ declare global {
       moveWindowUp: () => Promise<void>
       moveWindowDown: () => Promise<void>
       quitApp: () => Promise<void>
-      
+
       // LLM Model Management
       getCurrentLlmConfig: () => Promise<{ provider: "ollama" | "gemini" | "openrouter"; model: string; isOllama: boolean; isOpenRouter?: boolean }>
       getAvailableOllamaModels: () => Promise<string[]>
@@ -67,13 +68,13 @@ declare global {
       switchToGemini: (apiKey?: string) => Promise<{ success: boolean; error?: string }>
       switchToOpenRouter: (apiKey: string, models: string[]) => Promise<{ success: boolean; error?: string }>
       testLlmConnection: () => Promise<{ success: boolean; error?: string }>
-      
+
       // Clipboard Monitoring
       startClipboardMonitor: () => Promise<{ success: boolean; error?: string }>
       stopClipboardMonitor: () => Promise<{ success: boolean; error?: string }>
       getClipboardStatus: () => Promise<{ active: boolean }>
       onCodeDetected: (callback: (data: { isCode: boolean; language: string | null; confidence: number; snippet: string }) => void) => () => void
-      
+
       invoke: (channel: string, ...args: any[]) => Promise<any>
     }
   }
@@ -91,7 +92,7 @@ const queryClient = new QueryClient({
 const App: React.FC = () => {
   const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
   const containerRef = useRef<HTMLDivElement>(null)
-  
+
   // Clipboard monitoring state
   const [showSolvePrompt, setShowSolvePrompt] = useState(false)
   const [codeDetection, setCodeDetection] = useState<{
@@ -208,10 +209,14 @@ const App: React.FC = () => {
   const handleSolve = async () => {
     console.log('[App] SOLVE triggered from clipboard')
     setShowSolvePrompt(false)
-    
-    // Trigger screenshot processing
+
+    // Trigger processing
     try {
-      await window.electronAPI.processScreenshots()
+      if (codeDetection && codeDetection.snippet) {
+        await window.electronAPI.processClipboardText(codeDetection.snippet)
+      } else {
+        await window.electronAPI.processScreenshots()
+      }
       setView("solutions")
     } catch (error) {
       console.error('[App] Error processing from clipboard:', error)
@@ -235,7 +240,7 @@ const App: React.FC = () => {
           ) : (
             <></>
           )}
-          
+
           {/* Clipboard Code Detection Prompt */}
           {showSolvePrompt && codeDetection && (
             <SolvePrompt
@@ -248,7 +253,7 @@ const App: React.FC = () => {
               autoDismissMs={5000}
             />
           )}
-          
+
           <ToastViewport />
         </ToastProvider>
       </QueryClientProvider>

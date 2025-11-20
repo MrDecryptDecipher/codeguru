@@ -93,6 +93,16 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
   })
 
+  ipcMain.handle("process-clipboard-text", async (_, text: string) => {
+    try {
+      await appState.processingHelper.processClipboardText(text)
+      return { success: true }
+    } catch (error: any) {
+      logger.error("Error processing clipboard text via IPC", error)
+      return { success: false, error: error.message }
+    }
+  })
+
   ipcMain.handle("realtime-start", async () => {
     try {
       await appState.realtimeAssistant.start()
@@ -240,7 +250,7 @@ export function initializeIpcHandlers(appState: AppState): void {
       // If API key and models not provided, try to get from config file
       let finalApiKey = apiKey;
       let finalModels = models;
-      
+
       if (!finalApiKey || !finalModels || finalModels.length === 0) {
         const config = ProcessingHelper.getOpenRouterConfig();
         if (config) {
@@ -248,11 +258,11 @@ export function initializeIpcHandlers(appState: AppState): void {
           finalModels = finalModels || config.models;
         }
       }
-      
+
       if (!finalApiKey || !finalModels || finalModels.length === 0) {
         return { success: false, error: "OpenRouter API key and models are required" };
       }
-      
+
       await llmHelper.switchToOpenRouter(finalApiKey, finalModels);
       return { success: true };
     } catch (error: any) {

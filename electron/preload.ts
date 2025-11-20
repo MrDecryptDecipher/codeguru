@@ -34,6 +34,7 @@ interface ElectronAPI {
   analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
   analyzeImageFile: (path: string) => Promise<{ text: string; timestamp: number }>
   processScreenshots: () => Promise<{ success: boolean; error?: string }>
+  processClipboardText: (text: string) => Promise<{ success: boolean; error?: string }>
   // Realtime assistant
   startRealtimeAssistant: () => Promise<{ success: boolean; error?: string }>
   stopRealtimeAssistant: () => Promise<{ success: boolean; error?: string }>
@@ -196,6 +197,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   analyzeAudioFile: (path: string) => ipcRenderer.invoke("analyze-audio-file", path),
   analyzeImageFile: (path: string) => ipcRenderer.invoke("analyze-image-file", path),
   processScreenshots: () => ipcRenderer.invoke("process-screenshots"),
+  processClipboardText: (text: string) => ipcRenderer.invoke("process-clipboard-text", text),
   startRealtimeAssistant: () => ipcRenderer.invoke("realtime-start"),
   stopRealtimeAssistant: () => ipcRenderer.invoke("realtime-stop"),
   getRealtimeStatus: () => ipcRenderer.invoke("realtime-status"),
