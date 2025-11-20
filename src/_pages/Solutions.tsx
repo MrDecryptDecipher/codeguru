@@ -491,11 +491,20 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
               <div className="px-4 py-3 space-y-4 max-w-full">
                 {/* Show Screenshot or Audio Result as main output if validation_type is manual */}
                 {problemStatementData?.validation_type === "manual" ? (
-                  <ContentSection
-                    title={problemStatementData?.output_format?.subtype === "voice" ? "Audio Result" : "Screenshot Result"}
-                    content={problemStatementData.problem_statement}
-                    isLoading={false}
-                  />
+                  <>
+                    <ContentSection
+                      title={problemStatementData?.output_format?.subtype === "voice" ? "Audio Result" : "Screenshot Result"}
+                      content={problemStatementData.problem_statement}
+                      isLoading={false}
+                    />
+                    {solutionData && (
+                      <SolutionSection
+                        title="Solution"
+                        content={solutionData}
+                        isLoading={false}
+                      />
+                    )}
+                  </>
                 ) : (
                   <>
                     {/* Problem Statement Section - Only for non-manual */}
@@ -508,8 +517,8 @@ const Solutions: React.FC<SolutionsProps> = ({ setView }) => {
                     {problemStatementData && !solutionData && (
                       <div className="mt-4 flex">
                         <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-                          {problemStatementData?.output_format?.subtype === "voice" 
-                            ? "Processing voice input..." 
+                          {problemStatementData?.output_format?.subtype === "voice"
+                            ? "Processing voice input..."
                             : "Generating solutions..."}
                         </p>
                       </div>
