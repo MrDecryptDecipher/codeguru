@@ -388,22 +388,17 @@ ${JSON.stringify(problemInfo, null, 2)}
 
 CRITICAL OUTPUT REQUIREMENTS:
 1. **LeetCode Format**: The code MUST be wrapped in \`class Solution:\`.
-   - Example:
-     \`\`\`python
-     class Solution:
-         def method_name(self, args):
-             # code
-     \`\`\`
-2. **Executable Code Only**: The "code" field must contain ONLY valid, executable Python code.
+2. **Correct Method Name**: You MUST use the EXACT function name and parameter signature expected by LeetCode (e.g., \`maximumScore\`, \`twoSum\`). Do NOT use generic names like \`optimalSolution\`. Look at the problem description for the required signature.
+3. **Executable Code Only**: The "code" field must contain ONLY valid, executable Python code.
    - NO markdown formatting (no \`\`\`python).
    - NO explanations in the code field.
-3. **Optimization**: For DSA problems, you MUST use the most optimal algorithm (Time/Space Complexity).
-4. **Robustness**: Handle edge cases.
+4. **Optimization**: For DSA problems, you MUST use the most optimal algorithm (Time/Space Complexity).
+5. **Robustness**: Handle edge cases.
 
 RESPONSE FORMAT (Strict JSON):
 {
   "solution": {
-    "code": "class Solution:\\n    def optimalSolution(self, args):\\n        # Highly optimized code here\\n        return result",
+    "code": "class Solution:\\n    def exactMethodName(self, arg1, arg2):\\n        # Highly optimized code here\\n        return result",
     "problem_statement": "Concise, technical restatement of the problem.",
     "context": "Key architectural decisions, patterns used (e.g., 'Sliding Window', 'Factory Pattern'), or domain context.",
     "suggested_responses": [
