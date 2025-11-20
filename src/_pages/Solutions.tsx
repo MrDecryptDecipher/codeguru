@@ -58,7 +58,14 @@ const SolutionSection = ({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(content as string)
+      // Remove markdown code fences if present
+      let codeToCopy = content as string
+      // Remove opening fence (e.g., ```python or ```)
+      codeToCopy = codeToCopy.replace(/^```\w*\n?/, '')
+      // Remove closing fence
+      codeToCopy = codeToCopy.replace(/\n?```\s*$/, '')
+
+      await navigator.clipboard.writeText(codeToCopy.trim())
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
