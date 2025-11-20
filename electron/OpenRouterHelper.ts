@@ -387,17 +387,23 @@ PROBLEM / CONTEXT:
 ${JSON.stringify(problemInfo, null, 2)}
 
 CRITICAL OUTPUT REQUIREMENTS:
-1. **Executable Code Only**: The "code" field must contain ONLY valid, executable code (Python by default unless specified otherwise). 
+1. **LeetCode Format**: The code MUST be wrapped in \`class Solution:\`.
+   - Example:
+     \`\`\`python
+     class Solution:
+         def method_name(self, args):
+             # code
+     \`\`\`
+2. **Executable Code Only**: The "code" field must contain ONLY valid, executable Python code.
    - NO markdown formatting (no \`\`\`python).
    - NO explanations in the code field.
-   - Must be ready to paste and run.
-2. **Optimization**: For DSA problems, you MUST use the most optimal algorithm (Time/Space Complexity).
-3. **Robustness**: Handle edge cases (empty inputs, large inputs, negative numbers, etc.).
+3. **Optimization**: For DSA problems, you MUST use the most optimal algorithm (Time/Space Complexity).
+4. **Robustness**: Handle edge cases.
 
 RESPONSE FORMAT (Strict JSON):
 {
   "solution": {
-    "code": "def optimalSolution(args):\\n    # Highly optimized code here\\n    return result",
+    "code": "class Solution:\\n    def optimalSolution(self, args):\\n        # Highly optimized code here\\n        return result",
     "problem_statement": "Concise, technical restatement of the problem.",
     "context": "Key architectural decisions, patterns used (e.g., 'Sliding Window', 'Factory Pattern'), or domain context.",
     "suggested_responses": [
