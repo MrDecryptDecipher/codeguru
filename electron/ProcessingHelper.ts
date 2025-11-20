@@ -352,6 +352,77 @@ export class ProcessingHelper {
     }
   }
 
+  public async processClipboardText(text: string): Promise<void> {
+    const mainWindow = this.appState.getMainWindow()
+    if (!mainWindow) return
+
+    // Switch view and notify start
+    mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.INITIAL_START)
+    this.appState.setView("solutions")
+    this.currentProcessingAbortController = new AbortController()
+
+    // Create conversation
+    const conversationId = this.conversationManager.createConversation('Clipboard Processing')
+
+    try {
+      const problemInfo = {
+        problem_statement: text,
+        input_format: { description: "Generated from clipboard text", parameters: [] as any[] },
+        output_format: { description: "Generated from clipboard text", type: "string", subtype: "text" },
+        complexity: { time: "N/A", space: "N/A" },
+        test_cases: [] as any[],
+        validation_type: "manual",
+        difficulty: "custom"
+      };
+
+      // Add to conversation
+      await this.conversationManager.addMessage('user', 'Clipboard text processed', {});
+      await this.conversationManager.addMessage('assistant', problemInfo.problem_statement, {
+        model: this.llmHelper.getCurrentModel(),
+        provider: this.llmHelper.getCurrentProvider()
+      });
+
+      mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.PROBLEM_EXTRACTED, problemInfo);
+      this.appState.setProblemInfo(problemInfo);
+
+      // Generate solution
+      const rawSolution = await ErrorHandler.executeWithProtection(
+        'solution-generation',
+        () => this.llmHelper.generateSolution(problemInfo),
+        {
+          maxRetries: 2,
+          initialDelay: 750,
+          retryableErrors: [Error]
+        }
+      );
+
+      const normalizedSolution = rawSolution?.solution
+        ? rawSolution
+        : { solution: rawSolution };
+
+      await this.conversationManager.addMessage(
+        'assistant',
+        normalizedSolution.solution?.code || 'Solution generated',
+        {
+          model: this.llmHelper.getCurrentModel(),
+          provider: this.llmHelper.getCurrentProvider(),
+        }
+      );
+
+      mainWindow.webContents.send(
+        this.appState.PROCESSING_EVENTS.SOLUTION_SUCCESS,
+        normalizedSolution
+      );
+
+    } catch (error: any) {
+      const userMessage = ErrorHandler.getUserFriendlyError(error);
+      logger.error("Clipboard processing error", error);
+      mainWindow.webContents.send(this.appState.PROCESSING_EVENTS.INITIAL_SOLUTION_ERROR, userMessage)
+    } finally {
+      this.currentProcessingAbortController = null
+    }
+  }
+
   public cancelOngoingRequests(): void {
     if (this.currentProcessingAbortController) {
       this.currentProcessingAbortController.abort()
