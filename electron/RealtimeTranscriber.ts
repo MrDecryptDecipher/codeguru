@@ -2,7 +2,7 @@ import { ChildProcessWithoutNullStreams, spawn } from 'child_process'
 import { EventEmitter } from 'events'
 import ffmpegPath from 'ffmpeg-static'
 import os from 'os'
-import { Deepgram, LiveClient } from '@deepgram/sdk'
+import { createClient, LiveClient, DeepgramClient } from '@deepgram/sdk'
 import { ConfigManager } from './ConfigManager'
 
 const record = require('node-record-lpcm16')
@@ -24,7 +24,7 @@ interface TranscriberOptions {
 }
 
 export class RealtimeTranscriber extends EventEmitter {
-  private dg: Deepgram | null = null
+  private dg: DeepgramClient | null = null
   private liveClient: LiveClient | null = null
   private captureProcess: ChildProcessWithoutNullStreams | null = null
   private isRunning = false
@@ -53,10 +53,9 @@ export class RealtimeTranscriber extends EventEmitter {
       )
     }
 
-    this.dg = new Deepgram(apiKey)
+    this.dg = createClient(apiKey)
 
-    // @ts-ignore - Deepgram SDK v3/v4 uses listen.live
-    this.liveClient = await this.dg.listen.live({
+    this.liveClient = this.dg.listen.live({
       model: 'nova-2',
       interim_results: this.config.interimResults,
       language: this.config.language,
