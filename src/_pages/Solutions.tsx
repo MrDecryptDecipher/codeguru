@@ -67,23 +67,29 @@ const SolutionSection = ({
         </div>
       </div>
     ) : (
-      <div className="w-full max-h-[400px] overflow-y-auto rounded-md">
-        <SyntaxHighlighter
-          showLineNumbers
-          language="python"
-          style={dracula}
-          customStyle={{
-            maxWidth: "100%",
-            margin: 0,
-            padding: "1rem",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-all"
-          }}
-          wrapLongLines={true}
-        >
-          {content as string}
-        </SyntaxHighlighter>
-      </div>
+      <>
+        <div className="w-full max-h-[400px] overflow-y-auto rounded-md scrollbar-dark">
+          <SyntaxHighlighter
+            showLineNumbers
+            language="python"
+            style={dracula}
+            customStyle={{
+              maxWidth: "100%",
+              margin: 0,
+              padding: "1rem",
+              whiteSpace: "pre-wrap",
+              wordBreak: "normal",
+              overflowWrap: "break-word"
+            }}
+            wrapLongLines={true}
+          >
+            {content as string}
+          </SyntaxHighlighter>
+        </div>
+        <div className="text-xs text-green-400 font-medium pt-2 text-center">
+          ✓ DONE
+        </div>
+      </>
     )}
   </div>
 )
