@@ -42,7 +42,6 @@ interface ElectronAPI {
   onRealtimeSuggestion: (callback: (data: any) => void) => () => void
   onRealtimeStatus: (callback: (data: any) => void) => () => void
   onRealtimeError: (callback: (message: string) => void) => () => void
-  onRealtimeError: (callback: (message: string) => void) => () => void
   quitApp: () => Promise<void>
 
   // LLM Model Management

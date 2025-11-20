@@ -152,7 +152,7 @@ export class RealtimeTranscriber extends EventEmitter {
       })
 
       this.captureProcess.stdout.on('data', (chunk: Buffer) => {
-        this.liveClient?.send(chunk)
+        this.liveClient?.send(chunk as any)
       })
 
       this.captureProcess.stderr.on('data', (chunk) => {
@@ -181,7 +181,7 @@ export class RealtimeTranscriber extends EventEmitter {
           this.emit('error', error)
         })
         .on('data', (chunk: Buffer) => {
-          this.liveClient?.send(chunk)
+          this.liveClient?.send(chunk as any)
         })
     }
   }
