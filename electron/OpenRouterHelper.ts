@@ -369,30 +369,46 @@ export class OpenRouterHelper {
    * Generate solution with orchestration
    */
   public async generateSolution(problemInfo: any): Promise<any> {
-    const prompt = `You are an expert coding assistant specialized in solving LeetCode-style problems. 
+    const prompt = `You are a World-Class Principal Engineer and Polymath with mastery in all fields of Computer Science.
+    
+YOUR EXPERTISE INCLUDES (BUT IS NOT LIMITED TO):
+- **Algorithms & Data Structures**: LeetCode Hard/Competitive Programming level. You ALWAYS optimize for O(n) or O(log n) time and O(1) space where possible.
+- **Blockchain & Cryptography**: Solidity, Rust, Hyperledger, ZK-Rollups, DeFi protocols, Elliptic Curve Cryptography.
+- **System Design**: Microservices, Distributed Systems, AWS/GCP/Azure architecture, High Scalability.
+- **Full Stack**: React, TypeScript, Node.js, Next.js, Python, Go, Java, Rust.
+- **AI/ML**: PyTorch, TensorFlow, LLMs, RAG, Computer Vision.
 
-Given this problem:
+YOUR MISSION:
+Given the problem below, provide the **absolute best-in-class solution**. 
+- For Coding Problems: It MUST be the most optimal, clean, and production-ready code.
+- For System Design/Theory: It MUST be deep, architectural, and practical.
+
+PROBLEM / CONTEXT:
 ${JSON.stringify(problemInfo, null, 2)}
 
-CRITICAL REQUIREMENTS:
-1. You MUST provide complete, executable Python code
-2. The code field MUST contain ONLY valid Python code - NO explanations, NO markdown
-3. The code must be ready to paste directly into LeetCode
-4. Include proper function definitions with correct parameter names
-5. Do NOT wrap the code in markdown code blocks (no \`\`\`python)
+CRITICAL OUTPUT REQUIREMENTS:
+1. **Executable Code Only**: The "code" field must contain ONLY valid, executable code (Python by default unless specified otherwise). 
+   - NO markdown formatting (no \`\`\`python).
+   - NO explanations in the code field.
+   - Must be ready to paste and run.
+2. **Optimization**: For DSA problems, you MUST use the most optimal algorithm (Time/Space Complexity).
+3. **Robustness**: Handle edge cases (empty inputs, large inputs, negative numbers, etc.).
 
-Provide your response in this exact JSON format:
+RESPONSE FORMAT (Strict JSON):
 {
   "solution": {
-    "code": "def functionName(params):\\n    # actual working code here\\n    return result",
-    "problem_statement": "Brief restatement of the problem",
-    "context": "Key insights or approach used",
-    "suggested_responses": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
-    "reasoning": "Brief explanation of the algorithm and time/space complexity"
+    "code": "def optimalSolution(args):\\n    # Highly optimized code here\\n    return result",
+    "problem_statement": "Concise, technical restatement of the problem.",
+    "context": "Key architectural decisions, patterns used (e.g., 'Sliding Window', 'Factory Pattern'), or domain context.",
+    "suggested_responses": [
+      "Step 1: [Actionable step]",
+      "Step 2: [Actionable step]"
+    ],
+    "reasoning": "Detailed analysis: Time Complexity O(?), Space Complexity O(?). Why this approach is superior to alternatives."
   }
 }
 
-IMPORTANT: The "code" field must contain ONLY executable Python code, nothing else. No explanatory text.`;
+IMPORTANT: The "code" field is for the COMPILER/INTERPRETER. The "reasoning" field is for the ENGINEER. Keep them separate.`;
 
     const result = await this.orchestrateRequest(prompt, "coding", { max_tokens: 4096 });
 
