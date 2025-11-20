@@ -53,45 +53,80 @@ const SolutionSection = ({
   title: string
   content: React.ReactNode
   isLoading: boolean
-}) => (
-  <div className="space-y-2">
-    <h2 className="text-[13px] font-medium text-white tracking-wide">
-      {title}
-    </h2>
-    {isLoading ? (
-      <div className="space-y-1.5">
-        <div className="mt-4 flex">
-          <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
-            Loading solutions...
-          </p>
-        </div>
-      </div>
-    ) : (
-      <div className="space-y-2">
-        <div className="w-full max-h-[500px] overflow-y-auto rounded-md scrollbar-dark bg-[#282a36]">
-          <SyntaxHighlighter
-            showLineNumbers
-            language="python"
-            style={dracula}
-            customStyle={{
-              maxWidth: "100%",
-              margin: 0,
-              padding: "1rem",
-              background: "transparent"
-            }}
-            wrapLines={true}
-            wrapLongLines={true}
+}) => {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content as string)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h2 className="text-[13px] font-medium text-white tracking-wide">
+          {title}
+        </h2>
+        {!isLoading && (
+          <button
+            onClick={handleCopy}
+            className="text-xs px-2 py-1 rounded bg-gray-700/50 hover:bg-gray-600/50 text-gray-300 hover:text-white transition-all duration-200 flex items-center gap-1"
+            style={{ WebkitAppRegion: 'no-drag' } as any}
           >
-            {content as string}
-          </SyntaxHighlighter>
-        </div>
-        <div className="text-xs text-green-400 font-bold pt-3 pb-1 text-center bg-gray-900/50 rounded-md border border-green-500/30">
-          ✓ DONE
-        </div>
+            {copied ? (
+              <>
+                <span>✓</span>
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <span>📋</span>
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
-    )}
-  </div>
-)
+      {isLoading ? (
+        <div className="space-y-1.5">
+          <div className="mt-4 flex">
+            <p className="text-xs bg-gradient-to-r from-gray-300 via-gray-100 to-gray-300 bg-clip-text text-transparent animate-pulse">
+              Loading solutions...
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="w-full max-h-[500px] overflow-y-auto rounded-md scrollbar-dark bg-[#282a36]">
+            <SyntaxHighlighter
+              showLineNumbers
+              language="python"
+              style={dracula}
+              customStyle={{
+                maxWidth: "100%",
+                margin: 0,
+                padding: "1rem",
+                background: "transparent"
+              }}
+              wrapLines={true}
+              wrapLongLines={true}
+            >
+              {content as string}
+            </SyntaxHighlighter>
+          </div>
+          <div className="text-xs text-green-400 font-bold pt-3 pb-1 text-center bg-gray-900/50 rounded-md border border-green-500/30">
+            ✓ DONE
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export const ComplexitySection = ({
   timeComplexity,

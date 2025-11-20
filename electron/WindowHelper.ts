@@ -29,7 +29,7 @@ export class WindowHelper {
   constructor(appState: AppState) {
     this.appState = appState
     this.configManager = ConfigManager.getInstance()
-    
+
     // Load saved window position/size from config
     const windowConfig = this.configManager.getSection('window');
     if (windowConfig.position) {
@@ -85,16 +85,16 @@ export class WindowHelper {
     this.screenWidth = workArea.width
     this.screenHeight = workArea.height
 
-    
+
     const windowConfig = this.configManager.getSection('window');
     const savedPosition = windowConfig.position;
     const savedSize = windowConfig.size;
-    
+
     const windowSettings: Electron.BrowserWindowConstructorOptions = {
       width: savedSize?.width || 400,
       height: savedSize?.height || 600,
-      minWidth: 300,
-      minHeight: 200,
+      minWidth: 250,
+      minHeight: 150,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: true,
@@ -133,7 +133,7 @@ export class WindowHelper {
       }
       // Keep window focusable on Linux for proper interaction
       this.mainWindow.setFocusable(true)
-    } 
+    }
     this.mainWindow.setSkipTaskbar(true)
     this.mainWindow.setAlwaysOnTop(true)
 
@@ -246,16 +246,16 @@ export class WindowHelper {
 
     const primaryDisplay = screen.getPrimaryDisplay()
     const workArea = primaryDisplay.workAreaSize
-    
+
     // Get current window size or use defaults
     const windowBounds = this.mainWindow.getBounds()
     const windowWidth = windowBounds.width || 400
     const windowHeight = windowBounds.height || 600
-    
+
     // Calculate center position
     const centerX = Math.floor((workArea.width - windowWidth) / 2)
     const centerY = Math.floor((workArea.height - windowHeight) / 2)
-    
+
     // Set window position
     this.mainWindow.setBounds({
       x: centerX,
@@ -263,7 +263,7 @@ export class WindowHelper {
       width: windowWidth,
       height: windowHeight
     })
-    
+
     // Update internal state
     this.windowPosition = { x: centerX, y: centerY }
     this.windowSize = { width: windowWidth, height: windowHeight }
@@ -282,7 +282,7 @@ export class WindowHelper {
     this.mainWindow.focus()
     this.mainWindow.setAlwaysOnTop(true)
     this.isWindowVisible = true
-    
+
     console.log(`Window centered and shown`)
   }
 
@@ -385,7 +385,7 @@ export class WindowHelper {
 
     const display = displays[displayId];
     const bounds = this.mainWindow.getBounds();
-    
+
     // Calculate position on target display
     const x = display.bounds.x + (display.bounds.width - bounds.width) / 2;
     const y = display.bounds.y + (display.bounds.height - bounds.height) / 2;
