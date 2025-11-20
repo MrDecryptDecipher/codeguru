@@ -195,10 +195,19 @@ const App: React.FC = () => {
         console.log("View reset to 'queue' via Command+R shortcut")
       }),
       window.electronAPI.onProblemExtracted((data: any) => {
-        if (view === "queue") {
-          console.log("Problem extracted successfully")
-          queryClient.invalidateQueries(["problem_statement"])
-          queryClient.setQueryData(["problem_statement"], data)
+        console.log("[App] Problem extracted successfully", data)
+        queryClient.setQueryData(["problem_statement"], data)
+      }),
+      window.electronAPI.onSolutionSuccess((data: any) => {
+        console.log("[App] Received solution success", data)
+        if (data?.solution) {
+          const solutionData = {
+            code: data.solution.code,
+            thoughts: data.solution.thoughts,
+            time_complexity: data.solution.time_complexity,
+            space_complexity: data.solution.space_complexity
+          }
+          queryClient.setQueryData(["solution"], solutionData)
         }
       })
     ]
