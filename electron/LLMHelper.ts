@@ -231,39 +231,7 @@ For any user input:
     }
   }
 
-  public async generateSolution(problemInfo: any) {
-    const prompt = `${this.systemPrompt}\n\nGiven this problem or situation:\n${JSON.stringify(problemInfo, null, 2)}\n\nPlease provide your response in the following JSON format:\n{
-  "solution": {
-    "code": "The code or main answer here.",
-    "problem_statement": "Restate the problem or situation.",
-    "context": "Relevant background/context.",
-    "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
-    "reasoning": "Explanation of why these suggestions are appropriate."
-  }
-}\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
 
-    console.log("[LLMHelper] Calling LLM for solution...");
-    try {
-      if (this.useOpenRouter && this.openRouterHelper) {
-        const result = await this.openRouterHelper.generateSolution(problemInfo)
-        console.log("[LLMHelper] OpenRouter returned result.");
-        return result
-      } else if (this.model) {
-        const result = await this.model.generateContent(prompt)
-        console.log("[LLMHelper] Gemini LLM returned result.");
-        const response = await result.response
-        const text = this.cleanJsonResponse(response.text())
-        const parsed = JSON.parse(text)
-        console.log("[LLMHelper] Parsed LLM response:", parsed)
-        return parsed
-      } else {
-        throw new Error("No LLM provider configured")
-      }
-    } catch (error) {
-      console.error("[LLMHelper] Error in generateSolution:", error);
-      throw error;
-    }
-  }
 
   public async debugSolutionWithImages(problemInfo: any, currentCode: string, debugImagePaths: string[]) {
     try {
