@@ -79,7 +79,7 @@ CRITICAL INSTRUCTION FOR LEETCODE:
 
   // ... (existing methods) ...
 
-  public async generateSolution(problemInfo: any) {
+  public async generateSolution(problemInfo: any): Promise<any> {
     // Enhance problem info with Knowledge Base context
     let enhancedInfo = { ...problemInfo };
 

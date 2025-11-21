@@ -299,7 +299,7 @@ export class ProcessingHelper {
 
         await this.conversationManager.addMessage(
           'assistant',
-          normalizedSolution.solution?.code || 'Solution generated',
+          (normalizedSolution as any).solution?.code || 'Solution generated',
           {
             model: this.llmHelper.getCurrentModel(),
             provider: this.llmHelper.getCurrentProvider(),
@@ -421,7 +421,7 @@ export class ProcessingHelper {
 
       await this.conversationManager.addMessage(
         'assistant',
-        normalizedSolution.solution?.code || 'Solution generated',
+        (normalizedSolution as any).solution?.code || 'Solution generated',
         {
           model: this.llmHelper.getCurrentModel(),
           provider: this.llmHelper.getCurrentProvider(),
