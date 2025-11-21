@@ -29,7 +29,7 @@ CRITICAL INSTRUCTION FOR LEETCODE:
 - Look for the method signature in the user's input or image.
 - If the user provides an error like "AttributeError: 'Solution' object has no attribute 'X'", it means you used the wrong name. CORRECT IT immediately.
 - Do NOT invent method names based on the title (e.g., do NOT use \`maximizeCyclicPartitionScore\` if the signature is \`maximumScore\`).
-- For "Maximize Cyclic Partition Score", the method name is \`maximumScore\`.\`
+- For "Maximize Cyclic Partition Score", the method name is \`maximumScore\`.`
   private useOllama: boolean = false
   private useOpenRouter: boolean = false
   private ollamaModel: string = "llama3.2"
