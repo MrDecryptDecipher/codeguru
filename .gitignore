@@ -140,6 +140,9 @@ dist
 # Electron Builder Output
 release/
 
-# App Data
-screenshots/
-temp/
+# App Datrelease
+screenshots
+temp
+venv
+temp_kaggle_data
+electron/leetcode_kb.json/
