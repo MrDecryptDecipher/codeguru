@@ -159,6 +159,13 @@ export class ProcessingHelper {
         true, // useOpenRouter
         openRouterConfig.models
       )
+
+      // Configure Gemini fallback if key is available
+      const geminiKey = process.env.GEMINI_API_KEY
+      if (geminiKey) {
+        this.llmHelper.setGeminiKey(geminiKey)
+        console.log("[ProcessingHelper] Configured Gemini fallback")
+      }
     } else {
       // Check if user wants to use Ollama
       const useOllama = process.env.USE_OLLAMA === "true"

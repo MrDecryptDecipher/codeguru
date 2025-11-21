@@ -35,6 +35,11 @@ CRITICAL INSTRUCTION FOR LEETCODE:
   private ollamaUrl: string = "http://localhost:11434"
   private openRouterHelper: OpenRouterHelper | null = null
   private kbHelper: KnowledgeBaseHelper
+  private geminiApiKey: string | null = null
+
+  public setGeminiKey(key: string) {
+    this.geminiApiKey = key;
+  }
 
   constructor(
     apiKey?: string,
@@ -107,9 +112,20 @@ CRITICAL INSTRUCTION FOR LEETCODE:
     console.log("[LLMHelper] Calling LLM for solution...");
     try {
       if (this.useOpenRouter && this.openRouterHelper) {
-        const result = await this.openRouterHelper.generateSolution(enhancedInfo)
-        console.log("[LLMHelper] OpenRouter returned result.");
-        return result
+        try {
+          const result = await this.openRouterHelper.generateSolution(enhancedInfo)
+          console.log("[LLMHelper] OpenRouter returned result.");
+          return result
+        } catch (orError) {
+          console.error("[LLMHelper] OpenRouter failed:", orError);
+          if (this.geminiApiKey) {
+            console.log("[LLMHelper] Falling back to Gemini...");
+            await this.switchToGemini(this.geminiApiKey);
+            // Recursive call with Gemini now active
+            return this.generateSolution(problemInfo);
+          }
+          throw orError;
+        }
       } else if (this.model) {
         const result = await this.model.generateContent(prompt)
         console.log("[LLMHelper] Gemini LLM returned result.");
