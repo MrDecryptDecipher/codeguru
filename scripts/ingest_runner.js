@@ -43,9 +43,24 @@ function runCommand(command, args, name, envVars = {}) {
 async function main() {
     try {
         // Kaggle Credentials (provided by user)
+        // We will write this to a local file to ensure the Kaggle API finds it
+        // This avoids issues with environment variable propagation on Windows
+        const kaggleConfigDir = path.join(rootDir, 'temp_kaggle_config');
+        if (!fs.existsSync(kaggleConfigDir)) {
+            fs.mkdirSync(kaggleConfigDir, { recursive: true });
+        }
+
+        const kaggleJsonPath = path.join(kaggleConfigDir, 'kaggle.json');
+        const kaggleCreds = {
+            username: 'godsandeep',
+            key: 'ad186a12accb9be01213cb7317d6d904'
+        };
+
+        fs.writeFileSync(kaggleJsonPath, JSON.stringify(kaggleCreds, null, 2));
+        console.log(`Created temporary Kaggle config at: ${kaggleJsonPath}`);
+
         const kaggleEnv = {
-            KAGGLE_USERNAME: 'godsandeep',
-            KAGGLE_KEY: 'ad186a12accb9be01213cb7317d6d904'
+            KAGGLE_CONFIG_DIR: kaggleConfigDir
         };
 
         // 1. Check/Create venv
@@ -76,11 +91,23 @@ async function main() {
         console.log('Installing requirements...');
         await runCommand(pythonExec, ['-m', 'pip', 'install', '-r', requirementsPath], 'Pip Install');
 
-        // 3. Run ingestion script
+        // 3. Run ingestion script with Kaggle credentials
         console.log('Running ingestion script...');
-        await runCommand(pythonExec, [scriptPath], 'Ingest Data');
+        try {
+            await runCommand(pythonExec, [scriptPath], 'Ingest Data', kaggleEnv);
+            console.log('✅ Ingestion complete!');
+        } finally {
+            // Cleanup credentials file
+            try {
+                if (fs.existsSync(kaggleConfigDir)) {
+                    fs.rmSync(kaggleConfigDir, { recursive: true, force: true });
+                    console.log('Cleaned up temporary credentials.');
+                }
+            } catch (cleanupErr) {
+                console.warn('Warning: Failed to cleanup temp config:', cleanupErr.message);
+            }
+        }
 
-        console.log('✅ Ingestion complete!');
     } catch (error) {
         console.error('❌ Error:', error.message);
         console.log('Tip: If this persists, try deleting the "venv" folder manually and run again.');
