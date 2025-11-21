@@ -21,7 +21,15 @@ export class KnowledgeBaseHelper {
         if (app.isPackaged) {
             this.kbPath = path.join(process.resourcesPath, 'leetcode_kb.json');
         } else {
-            this.kbPath = path.join(__dirname, 'leetcode_kb.json');
+            // In dev, try dist-electron first, then fallback to source electron folder
+            const distPath = path.join(__dirname, 'leetcode_kb.json');
+            const sourcePath = path.join(__dirname, '..', 'electron', 'leetcode_kb.json');
+
+            if (fs.existsSync(sourcePath)) {
+                this.kbPath = sourcePath;
+            } else {
+                this.kbPath = distPath;
+            }
         }
     }
 
