@@ -94,6 +94,7 @@ CRITICAL INSTRUCTION FOR LEETCODE:
           difficulty: kbProblem.difficulty,
           tags: kbProblem.tags,
           official_description: kbProblem.description,
+          official_solution_snippet: kbProblem.solution,
           similar_problems: this.kbHelper.getRelatedProblems(kbProblem.tags).map(p => p.title)
         };
       }
