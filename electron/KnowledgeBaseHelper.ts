@@ -60,10 +60,20 @@ export class KnowledgeBaseHelper {
         }
 
         // 2. Fuzzy / Substring Match
-        // This is a simple implementation. For better results, we could use a library like fuse.js
-        // but for now, simple inclusion check is fast and effective for exact LeetCode titles.
+        // We need to be careful not to match short common words.
         const keys = Object.keys(this.kb);
-        const match = keys.find(k => k.includes(normalizedQuery) || normalizedQuery.includes(k));
+        const match = keys.find(k => {
+            // Ignore very short keys to avoid false positives
+            if (k.length < 5) return false;
+
+            // Check if key is contained in query
+            if (normalizedQuery.includes(k)) return true;
+
+            // Check if query is contained in key (only if query is substantial)
+            if (normalizedQuery.length > 5 && k.includes(normalizedQuery)) return true;
+
+            return false;
+        });
 
         if (match) {
             return this.kb[match];
