@@ -15,7 +15,7 @@ const pythonExec = isWindows
 const scriptPath = path.join(__dirname, 'ingest_leetcode_data.py');
 const requirementsPath = path.join(__dirname, 'requirements.txt');
 
-function runCommand(command, args, name) {
+function runCommand(command, args, name, envVars = {}) {
     return new Promise((resolve, reject) => {
         // Quote paths if they contain spaces
         const commandStr = command.includes(' ') ? `"${command}"` : command;
@@ -26,7 +26,8 @@ function runCommand(command, args, name) {
         const proc = spawn(commandStr, args, {
             cwd: rootDir,
             stdio: 'inherit',
-            shell: true
+            shell: true,
+            env: { ...process.env, ...envVars }
         });
 
         proc.on('close', (code) => {
@@ -41,6 +42,12 @@ function runCommand(command, args, name) {
 
 async function main() {
     try {
+        // Kaggle Credentials (provided by user)
+        const kaggleEnv = {
+            KAGGLE_USERNAME: 'godsandeep',
+            KAGGLE_KEY: 'ad186a12accb9be01213cb7317d6d904'
+        };
+
         // 1. Check/Create venv
         // Check if python executable exists, if not, recreate venv
         if (!fs.existsSync(pythonExec)) {
