@@ -25,10 +25,10 @@ For any user input:
 5. Be proactive and anticipate edge cases or future scalability issues.
 
 CRITICAL INSTRUCTION FOR LEETCODE:
-- You MUST use the EXACT method name required by the problem (e.g., `maximumScore`, `twoSum`).
+- You MUST use the EXACT method name required by the problem (e.g., \`maximumScore\`, \`twoSum\`).
 - Look for the method signature in the user's input or image.
 - If the user provides an error like "AttributeError: 'Solution' object has no attribute 'X'", it means you used the wrong name. CORRECT IT immediately.
-- Do NOT invent method names based on the title (e.g., do NOT use `maximizeCyclicPartitionScore` if the signature is `maximumScore`).`
+- Do NOT invent method names based on the title (e.g., do NOT use \`maximizeCyclicPartitionScore\` if the signature is \`maximumScore\`).\`
   private useOllama: boolean = false
   private useOpenRouter: boolean = false
   private ollamaModel: string = "llama3.2"
@@ -55,11 +55,11 @@ constructor(
       throw new Error("OpenRouter models list is required when using OpenRouter")
     }
     this.openRouterHelper = new OpenRouterHelper(apiKey, openRouterModels)
-    console.log(`[LLMHelper] Using OpenRouter with ${openRouterModels.length} models`)
+    console.log(`[LLMHelper] Using OpenRouter with ${ openRouterModels.length } models`)
   } else if (useOllama) {
     this.ollamaUrl = ollamaUrl || "http://localhost:11434"
     this.ollamaModel = ollamaModel || "gemma:latest" // Default fallback
-    console.log(`[LLMHelper] Using Ollama with model: ${this.ollamaModel}`)
+    console.log(`[LLMHelper] Using Ollama with model: ${ this.ollamaModel } `)
 
     // Auto-detect and use first available model if specified model doesn't exist
     this.initializeOllamaModel()
@@ -83,7 +83,7 @@ constructor(
   if (problemTitle) {
     const kbProblem = this.kbHelper.findProblem(problemTitle);
     if (kbProblem) {
-      console.log(`[LLMHelper] Found problem in KB: ${kbProblem.title}`);
+      console.log(`[LLMHelper] Found problem in KB: ${ kbProblem.title } `);
       enhancedInfo.kb_context = {
         official_title: kbProblem.title,
         difficulty: kbProblem.difficulty,
@@ -94,15 +94,15 @@ constructor(
     }
   }
 
-  const prompt = `${this.systemPrompt}\n\nGiven this problem or situation:\n${JSON.stringify(enhancedInfo, null, 2)}\n\nPlease provide your response in the following JSON format:\n{
+  const prompt = `${ this.systemPrompt } \n\nGiven this problem or situation: \n${ JSON.stringify(enhancedInfo, null, 2) } \n\nPlease provide your response in the following JSON format: \n{
   "solution": {
     "code": "The code or main answer here.",
-    "problem_statement": "Restate the problem or situation.",
-    "context": "Relevant background/context.",
-    "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
-    "reasoning": "Explanation of why these suggestions are appropriate."
+      "problem_statement": "Restate the problem or situation.",
+        "context": "Relevant background/context.",
+          "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
+            "reasoning": "Explanation of why these suggestions are appropriate."
   }
-}\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
+} \nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
 
   console.log("[LLMHelper] Calling LLM for solution...");
   try {
@@ -139,10 +139,10 @@ constructor(
 
   private cleanJsonResponse(text: string): string {
   // Remove markdown code block syntax if present
-  text = text.replace(/^```(?:json)?\n/, '').replace(/\n```$/, '');
-  // Remove any leading/trailing whitespace
-  text = text.trim();
-  return text;
+  text = text.replace(/^```(?: json) ?\n /, '').replace(/\n```$/, '');
+// Remove any leading/trailing whitespace
+text = text.trim();
+return text;
 }
 
   private async callOllama(prompt: string): Promise < string > {
