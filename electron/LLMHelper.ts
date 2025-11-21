@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai"
 import fs from "fs"
 import { OpenRouterHelper } from "./OpenRouterHelper"
+import { KnowledgeBaseHelper } from "./KnowledgeBaseHelper"
 
 interface OllamaResponse {
   response: string
@@ -27,6 +28,7 @@ For any user input:
   private ollamaModel: string = "llama3.2"
   private ollamaUrl: string = "http://localhost:11434"
   private openRouterHelper: OpenRouterHelper | null = null
+  private kbHelper: KnowledgeBaseHelper
 
   constructor(
     apiKey?: string,
@@ -36,6 +38,9 @@ For any user input:
     useOpenRouter: boolean = false,
     openRouterModels?: string[]
   ) {
+    this.kbHelper = new KnowledgeBaseHelper()
+    this.kbHelper.loadKnowledgeBase()
+
     this.useOllama = useOllama
     this.useOpenRouter = useOpenRouter
 
@@ -58,6 +63,61 @@ For any user input:
       console.log("[LLMHelper] Using Google Gemini")
     } else {
       throw new Error("Either provide API key for Gemini/OpenRouter or enable Ollama mode")
+    }
+  }
+
+  // ... (existing methods) ...
+
+  public async generateSolution(problemInfo: any) {
+    // Enhance problem info with Knowledge Base context
+    let enhancedInfo = { ...problemInfo };
+
+    // Try to find the problem in KB
+    const problemTitle = problemInfo.title || problemInfo.problem_statement?.split('\\n')[0] || "";
+    if (problemTitle) {
+      const kbProblem = this.kbHelper.findProblem(problemTitle);
+      if (kbProblem) {
+        console.log(`[LLMHelper] Found problem in KB: ${kbProblem.title}`);
+        enhancedInfo.kb_context = {
+          official_title: kbProblem.title,
+          difficulty: kbProblem.difficulty,
+          tags: kbProblem.tags,
+          official_description: kbProblem.description,
+          similar_problems: this.kbHelper.getRelatedProblems(kbProblem.tags).map(p => p.title)
+        };
+      }
+    }
+
+    const prompt = `${this.systemPrompt}\n\nGiven this problem or situation:\n${JSON.stringify(enhancedInfo, null, 2)}\n\nPlease provide your response in the following JSON format:\n{
+  "solution": {
+    "code": "The code or main answer here.",
+    "problem_statement": "Restate the problem or situation.",
+    "context": "Relevant background/context.",
+    "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
+    "reasoning": "Explanation of why these suggestions are appropriate."
+  }
+}\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
+
+    console.log("[LLMHelper] Calling LLM for solution...");
+    try {
+      if (this.useOpenRouter && this.openRouterHelper) {
+        const result = await this.openRouterHelper.generateSolution(enhancedInfo)
+        console.log("[LLMHelper] OpenRouter returned result.");
+        return result
+      } else if (this.model) {
+        const result = await this.model.generateContent(prompt)
+        console.log("[LLMHelper] Gemini LLM returned result.");
+        const response = await result.response
+        const text = this.cleanJsonResponse(response.text())
+        const parsed = JSON.parse(text)
+        console.log("[LLMHelper] Parsed LLM response:", parsed)
+        return parsed
+      } else {
+        throw new Error("No LLM provider configured")
+      }
+    } catch (error) {
+      console.error("Error generating solution:", error)
+      throw error
     }
   }
 
