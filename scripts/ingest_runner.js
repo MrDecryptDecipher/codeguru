@@ -12,18 +12,18 @@ const pythonExec = isWindows
     ? path.join(venvDir, 'Scripts', 'python.exe')
     : path.join(venvDir, 'bin', 'python3');
 
-const pipExec = isWindows
-    ? path.join(venvDir, 'Scripts', 'pip.exe')
-    : path.join(venvDir, 'bin', 'pip');
-
 const scriptPath = path.join(__dirname, 'ingest_leetcode_data.py');
 const requirementsPath = path.join(__dirname, 'requirements.txt');
 
 function runCommand(command, args, name) {
     return new Promise((resolve, reject) => {
-        console.log(`[${name}] Running: ${command} ${args.join(' ')}`);
+        // Quote paths if they contain spaces
+        const commandStr = command.includes(' ') ? `"${command}"` : command;
+        const argsStr = args.map(arg => arg.includes(' ') ? `"${arg}"` : arg).join(' ');
 
-        const proc = spawn(command, args, {
+        console.log(`[${name}] Running: ${commandStr} ${argsStr}`);
+
+        const proc = spawn(commandStr, args, {
             cwd: rootDir,
             stdio: 'inherit',
             shell: true
@@ -41,16 +41,33 @@ function runCommand(command, args, name) {
 
 async function main() {
     try {
-        // 1. Create venv if it doesn't exist
-        if (!fs.existsSync(venvDir)) {
-            console.log('Creating virtual environment...');
+        // 1. Check/Create venv
+        // Check if python executable exists, if not, recreate venv
+        if (!fs.existsSync(pythonExec)) {
+            console.log(`Python executable not found at ${pythonExec}. Creating virtual environment...`);
+
+            // If venv dir exists but is broken, try to remove it
+            if (fs.existsSync(venvDir)) {
+                try {
+                    fs.rmSync(venvDir, { recursive: true, force: true });
+                    console.log('Removed broken venv directory.');
+                } catch (e) {
+                    console.warn("Warning: Could not remove existing venv folder. Setup might fail.");
+                }
+            }
+
             const pythonSystem = isWindows ? 'python' : 'python3';
             await runCommand(pythonSystem, ['-m', 'venv', 'venv'], 'Create Venv');
         }
 
-        // 2. Install requirements
+        // Verify it exists now
+        if (!fs.existsSync(pythonExec)) {
+            throw new Error(`Failed to create venv or find python executable at: ${pythonExec}`);
+        }
+
+        // 2. Install requirements using python -m pip (safer than calling pip directly)
         console.log('Installing requirements...');
-        await runCommand(pipExec, ['install', '-r', requirementsPath], 'Pip Install');
+        await runCommand(pythonExec, ['-m', 'pip', 'install', '-r', requirementsPath], 'Pip Install');
 
         // 3. Run ingestion script
         console.log('Running ingestion script...');
@@ -59,6 +76,7 @@ async function main() {
         console.log('✅ Ingestion complete!');
     } catch (error) {
         console.error('❌ Error:', error.message);
+        console.log('Tip: If this persists, try deleting the "venv" folder manually and run again.');
         process.exit(1);
     }
 }
