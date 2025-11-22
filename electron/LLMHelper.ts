@@ -129,21 +129,31 @@ For each problem:
     let enhancedInfo = { ...problemInfo };
 
     // Try to find the problem in KB
-    const problemTitle = problemInfo.title || problemInfo.problem_statement?.split('\\n')[0] || "";
+    const problemTitle = problemInfo.title || problemInfo.problem_statement?.split('\n')[0] || "";
     if (problemTitle) {
       const kbProblem = this.kbHelper.findProblem(problemTitle);
       if (kbProblem) {
-        console.log(`[LLMHelper] Found problem in KB: ${kbProblem.title} `);
+        console.log(`[LLMHelper] Found problem in KB: ${kbProblem.title}`);
         enhancedInfo.kb_context = {
           official_title: kbProblem.title,
           difficulty: kbProblem.difficulty,
+          problem_id: kbProblem.id,
           tags: kbProblem.tags,
-          official_description: kbProblem.description,
-          official_solution_snippet: kbProblem.solution,
-          similar_problems: this.kbHelper.getRelatedProblems(kbProblem.tags).map(p => p.title)
+          // Note: Dataset doesn't contain solutions/descriptions
+          // We rely on the user's screenshot/input for method signatures
         };
       }
     }
+
+    // CRITICAL: Extract method signature from problem_statement or image text
+    // Look for patterns like "def methodName(" or "class Solution:"
+    const problemText = JSON.stringify(problemInfo);
+    const methodMatch = problemText.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+    if (methodMatch) {
+      console.log(`[LLMHelper] Detected method name from input: ${methodMatch[1]}`);
+      enhancedInfo.detected_method_name = methodMatch[1];
+    }
+
 
     const prompt = `${this.systemPrompt}
 
@@ -154,7 +164,7 @@ REQUIREMENTS:
 1. Use the MOST OPTIMAL algorithm (prefer O(n), O(n log n), or better)
 2. Handle ALL edge cases (empty, single element, duplicates, negatives)
 3. Write COMPLETE, PRODUCTION-READY code (no placeholders, no "...")
-4. Use the EXACT method name from the problem signature
+4. Use the EXACT method name from the problem signature${enhancedInfo.detected_method_name ? ` (DETECTED: ${enhancedInfo.detected_method_name})` : ''}
 5. For LeetCode problems, follow Python conventions (type hints, clean code)
 
 OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
