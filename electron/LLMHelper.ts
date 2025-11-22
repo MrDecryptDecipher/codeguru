@@ -178,9 +178,11 @@ CRITICAL INSTRUCTION FOR LEETCODE:
     // This is risky with regex, better to rely on the prompt, but we can try to fix obvious ones
 
     // 2. Triple quotes in Python code strings that aren't escaped
-    // If we see """ inside a string, it breaks JSON. 
-    // We can try to replace """ with \"\"\" if it looks like it's inside the code field.
-    // However, a safer bet is to instruct the LLM not to use them.
+    // This breaks JSON parsing. We replace them with single quotes which are valid in Python.
+    if (text.includes('"""')) {
+      console.log('[LLMHelper] Fixing triple quotes in JSON response');
+      text = text.replace(/"""/g, "'''");
+    }
 
     return text;
   }
@@ -470,7 +472,13 @@ CRITICAL INSTRUCTION FOR LEETCODE:
   public async switchToGemini(apiKey?: string): Promise<void> {
     if (apiKey) {
       const genAI = new GoogleGenerativeAI(apiKey);
-      this.model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      this.model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        generationConfig: {
+          maxOutputTokens: 8192,
+          temperature: 0.7
+        }
+      });
     }
 
     if (!this.model && !apiKey) {
