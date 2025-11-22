@@ -139,19 +139,29 @@ For each problem:
           difficulty: kbProblem.difficulty,
           problem_id: kbProblem.id,
           tags: kbProblem.tags,
-          // Note: Dataset doesn't contain solutions/descriptions
-          // We rely on the user's screenshot/input for method signatures
         };
+
+        // CRITICAL: Use KB method name if available (from HuggingFace dataset)
+        if (kbProblem.method_name) {
+          enhancedInfo.detected_method_name = kbProblem.method_name;
+          console.log(`[LLMHelper] Using KB method name: ${kbProblem.method_name}`);
+        }
+
+        // Optionally include solution snippet for reference
+        if (kbProblem.solution_code) {
+          enhancedInfo.kb_context.has_solution_reference = true;
+        }
       }
     }
 
-    // CRITICAL: Extract method signature from problem_statement or image text
-    // Look for patterns like "def methodName(" or "class Solution:"
-    const problemText = JSON.stringify(problemInfo);
-    const methodMatch = problemText.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
-    if (methodMatch) {
-      console.log(`[LLMHelper] Detected method name from input: ${methodMatch[1]}`);
-      enhancedInfo.detected_method_name = methodMatch[1];
+    // FALLBACK: Extract method signature from problem_statement or image text if not in KB
+    if (!enhancedInfo.detected_method_name) {
+      const problemText = JSON.stringify(problemInfo);
+      const methodMatch = problemText.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+      if (methodMatch) {
+        enhancedInfo.detected_method_name = methodMatch[1];
+        console.log(`[LLMHelper] Detected method name from input: ${methodMatch[1]}`);
+      }
     }
 
 

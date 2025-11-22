@@ -15,7 +15,9 @@
     "watch": "tsc -p electron/tsconfig.json --watch",
     "start": "npm run app:dev",
     "dist": "npm run app:build",
-    "ingest:leetcode": "node scripts/ingest_runner.js"
+    "ingest:leetcode": "node scripts/ingest_runner.js",
+    "ingest:hf": "node -e \"const {execSync} = require('child_process'); execSync('cd scripts && ../venv/bin/python3 ingest_hf_leetcode.py', {stdio: 'inherit'})\"",
+    "ingest:all": "npm run ingest:leetcode && npm run ingest:hf"
   },
   "build": {
     "appId": "com.electron.meeting-notes",

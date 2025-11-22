@@ -9,6 +9,10 @@ export interface KBProblem {
     tags: string[];
     description: string;
     solution: string;
+    // Enhanced fields from HuggingFace dataset
+    method_name?: string;
+    method_signature?: string;
+    solution_code?: string;
 }
 
 export class KnowledgeBaseHelper {
@@ -19,16 +23,25 @@ export class KnowledgeBaseHelper {
     constructor() {
         // In production, resources are in a different path
         if (app.isPackaged) {
-            this.kbPath = path.join(process.resourcesPath, 'leetcode_kb.json');
+            // Try enhanced KB first, fallback to basic KB
+            const enhancedPath = path.join(process.resourcesPath, 'leetcode_solutions_kb.json');
+            const basicPath = path.join(process.resourcesPath, 'leetcode_kb.json');
+            this.kbPath = fs.existsSync(enhancedPath) ? enhancedPath : basicPath;
         } else {
-            // In dev, try dist-electron first, then fallback to source electron folder
-            const distPath = path.join(__dirname, 'leetcode_kb.json');
-            const sourcePath = path.join(__dirname, '..', 'electron', 'leetcode_kb.json');
+            // In dev, try enhanced KB first, then fallback to source folder
+            const enhancedSourcePath = path.join(__dirname, '..', 'electron', 'leetcode_solutions_kb.json');
+            const basicSourcePath = path.join(__dirname, '..', 'electron', 'leetcode_kb.json');
+            const enhancedDistPath = path.join(__dirname, 'leetcode_solutions_kb.json');
+            const basicDistPath = path.join(__dirname, 'leetcode_kb.json');
 
-            if (fs.existsSync(sourcePath)) {
-                this.kbPath = sourcePath;
+            if (fs.existsSync(enhancedSourcePath)) {
+                this.kbPath = enhancedSourcePath;
+            } else if (fs.existsSync(enhancedDistPath)) {
+                this.kbPath = enhancedDistPath;
+            } else if (fs.existsSync(basicSourcePath)) {
+                this.kbPath = basicSourcePath;
             } else {
-                this.kbPath = distPath;
+                this.kbPath = basicDistPath;
             }
         }
     }
