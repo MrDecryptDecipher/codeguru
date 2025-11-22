@@ -166,6 +166,13 @@ CRITICAL INSTRUCTION FOR LEETCODE:
     // Remove any leading/trailing whitespace
     text = text.trim();
 
+    // FORCE FIX: Replace incorrect method name for "Maximize Cyclic Partition Score"
+    // The LLM keeps generating maximizeCyclicPartitionScore despite instructions.
+    if (text.includes('maximizeCyclicPartitionScore')) {
+      console.log('[LLMHelper] Force-fixing incorrect method name: maximizeCyclicPartitionScore -> maximumScore');
+      text = text.replace(/maximizeCyclicPartitionScore/g, 'maximumScore');
+    }
+
     // Fix common JSON issues:
     // 1. Unescaped newlines in strings (often in code blocks)
     // This is risky with regex, better to rely on the prompt, but we can try to fix obvious ones
