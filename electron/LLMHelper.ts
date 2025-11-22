@@ -24,14 +24,56 @@ For any user input:
 4. Always explain your reasoning, focusing on trade-offs, complexity, and best practices.
 5. Be proactive and anticipate edge cases or future scalability issues.
 
-CRITICAL INSTRUCTION FOR LEETCODE:
-- You MUST use the EXACT method name required by the problem (e.g., \`maximumScore\`, \`twoSum\`).
-- Look for the method signature in the user's input or image.
-- If the user provides an error like "AttributeError: 'Solution' object has no attribute 'X'", it means you used the wrong name. CORRECT IT immediately.
-- Do NOT invent method names based on the title (e.g., do NOT use \`maximizeCyclicPartitionScore\` if the signature is \`maximumScore\`).
-- For "Maximize Cyclic Partition Score", the method name is \`maximumScore\`.
-- IMPORTANT: When providing Python code in the JSON, DO NOT use triple quotes (""") for docstrings. Use single quotes or escaped newlines. Triple quotes break the JSON format.
-- Ensure all newlines in the "code" string are properly escaped (\\n).`
+═══════════════════════════════════════════════════════════════════
+CRITICAL INSTRUCTIONS FOR LEETCODE / COMPETITIVE PROGRAMMING:
+═══════════════════════════════════════════════════════════════════
+
+**METHOD NAMING (HIGHEST PRIORITY):**
+- You MUST use the EXACT method name from the problem signature (e.g., \`maximumScore\`, \`twoSum\`, \`lengthOfLongestSubstring\`).
+- NEVER invent method names based on the problem title.
+- For "Maximize Cyclic Partition Score", the method is \`maximumScore\`.
+- Look for the signature in: user input, screenshot, or error messages.
+- If you see "AttributeError: 'Solution' object has no attribute 'X'", the method name is WRONG. Use what the test expects.
+
+**CODE QUALITY REQUIREMENTS:**
+1. **OPTIMAL COMPLEXITY**: Always use the most efficient algorithm:
+   - Easy: O(n) or O(n log n) preferred
+   - Medium: O(n log n) or better required
+   - Hard: Must be optimal (no brute force unless requested)
+2. **COMPLETE SOLUTIONS**: Full, runnable code with all edge cases handled.
+3. **CLEAN CODE**: No unnecessary comments, clear variable names, production-ready.
+4. **NO SHORTCUTS**: No placeholders, no "..." in code, no incomplete logic.
+
+**ALGORITHM SELECTION PRIORITY:**
+1. Hash Maps / Sets for O(1) lookups
+2. Two Pointers for array/string problems
+3. Sliding Window for substring/subarray problems
+4. Binary Search for sorted arrays
+5. Dynamic Programming for optimization problems
+6. Graph algorithms (BFS/DFS/Dijkstra) when needed
+7. Heap/Priority Queue for k-th element problems
+
+**EDGE CASES YOU MUST HANDLE:**
+- Empty input
+- Single element
+- All elements the same
+- Negative numbers
+- Integer overflow (use appropriate data types)
+- Duplicate values
+- Sorted vs unsorted input
+
+**JSON FORMAT RESTRICTIONS:**
+- DO NOT use triple quotes (\"\"\") in Python code. Use single quotes (''') or avoid docstrings.
+- All newlines in "code" must be properly escaped (\\n).
+- Return ONLY valid JSON, no markdown blocks.
+
+**DEEP RESEARCH PROCESS:**
+For each problem:
+1. Identify the problem pattern (DP, Graph, Greedy, etc.)
+2. State the optimal time/space complexity
+3. Explain why this approach is optimal
+4. List all edge cases handled
+5. Provide step-by-step algorithm explanation`
   private useOllama: boolean = false
   private useOpenRouter: boolean = false
   private ollamaModel: string = "llama3.2"
@@ -103,15 +145,30 @@ CRITICAL INSTRUCTION FOR LEETCODE:
       }
     }
 
-    const prompt = `${this.systemPrompt} \n\nGiven this problem or situation: \n${JSON.stringify(enhancedInfo, null, 2)} \n\nPlease provide your response in the following JSON format: \n{
+    const prompt = `${this.systemPrompt}
+
+PROBLEM TO SOLVE:
+${JSON.stringify(enhancedInfo, null, 2)}
+
+REQUIREMENTS:
+1. Use the MOST OPTIMAL algorithm (prefer O(n), O(n log n), or better)
+2. Handle ALL edge cases (empty, single element, duplicates, negatives)
+3. Write COMPLETE, PRODUCTION-READY code (no placeholders, no "...")
+4. Use the EXACT method name from the problem signature
+5. For LeetCode problems, follow Python conventions (type hints, clean code)
+
+OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
+{
   "solution": {
-    "code": "The code or main answer here.",
-      "problem_statement": "Restate the problem or situation.",
-        "context": "Relevant background/context.",
-          "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
-            "reasoning": "Explanation of why these suggestions are appropriate."
+    "code": "Complete Python solution with optimal time complexity",
+    "problem_statement": "One-line summary of the problem",
+    "context": "Algorithm type (DP/Greedy/Graph/etc) and Time: O(?), Space: O(?)",
+    "suggested_responses": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+    "reasoning": "Why this approach is optimal. Edge cases handled: ..."
   }
-} \nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
+}
+
+CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in code.`
 
     console.log("[LLMHelper] Calling LLM for solution...");
     try {
