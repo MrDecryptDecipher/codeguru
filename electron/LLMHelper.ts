@@ -172,11 +172,20 @@ For each problem:
 PROBLEM TO SOLVE:
 ${JSON.stringify(enhancedInfo, null, 2)}
 
+${enhancedInfo.detected_method_name ? `
+CRITICAL METHOD SIGNATURE REQUIREMENT:
+The method MUST be named: ${enhancedInfo.detected_method_name}
+Your code MUST start with:
+    def ${enhancedInfo.detected_method_name}(self, ...):
+
+DO NOT use any other method name. The test runner will call ${enhancedInfo.detected_method_name}.
+` : ''}
+
 REQUIREMENTS:
 1. Use the MOST OPTIMAL algorithm (prefer O(n), O(n log n), or better)
 2. Handle ALL edge cases (empty, single element, duplicates, negatives)
 3. Write COMPLETE, PRODUCTION-READY code (no placeholders, no "...")
-4. Use the EXACT method name from the problem signature${enhancedInfo.detected_method_name ? ` (DETECTED: ${enhancedInfo.detected_method_name})` : ''}
+4. Use the EXACT method name${enhancedInfo.detected_method_name ? `: ${enhancedInfo.detected_method_name}` : ' from the problem signature'}
 5. For LeetCode problems, follow Python conventions (type hints, clean code)
 
 OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
