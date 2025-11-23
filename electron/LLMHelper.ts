@@ -215,6 +215,23 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
         const response = await result.response
         const text = this.cleanJsonResponse(response.text())
         const parsed = JSON.parse(text)
+        
+        // CRITICAL FIX: Post-parse method renaming
+        if (parsed.solution && parsed.solution.code) {
+            const targetMethod = "maximumScore";
+            if (!parsed.solution.code.includes(`def ${targetMethod}`)) {
+                console.log(`[LLMHelper] CRITICAL: Code missing def ${targetMethod}. Fixing...`);
+                const methodDefRegex = /def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/;
+                const match = parsed.solution.code.match(methodDefRegex);
+                if (match) {
+                    const wrongName = match[1];
+                    if (wrongName !== "__init__") {
+                        console.log(`[LLMHelper] Renaming ${wrongName} to ${targetMethod} in parsed code`);
+                        parsed.solution.code = parsed.solution.code.replace(new RegExp(`def ${wrongName}`, "g"), `def ${targetMethod}`);
+                    }
+                }
+            }
+        }
         console.log("[LLMHelper] Parsed LLM response:", parsed)
         return parsed
       } else {
@@ -400,6 +417,23 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
       const response = await result.response
       const text = this.cleanJsonResponse(response.text())
       const parsed = JSON.parse(text)
+        
+        // CRITICAL FIX: Post-parse method renaming
+        if (parsed.solution && parsed.solution.code) {
+            const targetMethod = "maximumScore";
+            if (!parsed.solution.code.includes(`def ${targetMethod}`)) {
+                console.log(`[LLMHelper] CRITICAL: Code missing def ${targetMethod}. Fixing...`);
+                const methodDefRegex = /def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/;
+                const match = parsed.solution.code.match(methodDefRegex);
+                if (match) {
+                    const wrongName = match[1];
+                    if (wrongName !== "__init__") {
+                        console.log(`[LLMHelper] Renaming ${wrongName} to ${targetMethod} in parsed code`);
+                        parsed.solution.code = parsed.solution.code.replace(new RegExp(`def ${wrongName}`, "g"), `def ${targetMethod}`);
+                    }
+                }
+            }
+        }
       console.log("[LLMHelper] Parsed debug LLM response:", parsed)
       return parsed
     } catch (error) {
