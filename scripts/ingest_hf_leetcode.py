@@ -3,9 +3,10 @@ import json
 import re
 from datasets import load_dataset
 
-# Configuration
-OUTPUT_FILE = "electron/leetcode_solutions_kb.json"
-EXISTING_KB_FILE = "electron/leetcode_kb.json"
+# Configuration - Use absolute paths from project root
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUTPUT_FILE = os.path.join(PROJECT_ROOT, "electron/leetcode_solutions_kb.json")
+EXISTING_KB_FILE = os.path.join(PROJECT_ROOT, "electron/leetcode_kb.json")
 
 def extract_method_signature(code):
     """Extract the method name and signature from Python code"""
@@ -49,8 +50,10 @@ def process_hf_dataset():
         
         for idx, item in enumerate(train_data):
             try:
-                # Extract fields (adjust based on actual schema)
-                title = str(item.get('title', '')).strip()
+                # Extract fields based on schema:
+                # Keys: ['post_href', 'python_solutions', 'slug', 'post_title', 'user', 'upvotes', 'views', 'problem_title', 'number', 'acceptance', 'difficulty']
+                
+                title = str(item.get('problem_title', '')).strip()
                 if not title:
                     continue
                 
@@ -61,15 +64,15 @@ def process_hf_dataset():
                     entry = existing_kb[title_key].copy()
                 else:
                     entry = {
-                        'id': str(item.get('id', '')),
+                        'id': str(item.get('number', '')),
                         'title': title,
                         'difficulty': str(item.get('difficulty', 'Medium')),
                         'tags': [],
-                        'description': ''
+                        'description': str(item.get('post_title', ''))
                     }
                 
                 # Add solution code
-                code = str(item.get('python', '') or item.get('python3', '') or item.get('code', ''))
+                code = str(item.get('python_solutions', ''))
                 if code:
                     entry['solution_code'] = code
                     
@@ -80,19 +83,13 @@ def process_hf_dataset():
                         entry['method_signature'] = sig_info['full_signature']
                         method_signature_count += 1
                 
-                # Add any other useful fields
-                if item.get('content'):
-                    entry['description'] = str(item.get('content'))
-                if item.get('topic_tags'):
-                    entry['tags'] = item.get('topic_tags')
-                
                 solutions_kb[title_key] = entry
                 
                 if (idx + 1) % 5000 == 0:
                     print(f"⏳ Processed {idx + 1}/{len(train_data)} solutions...")
                     
             except Exception as e:
-                print(f"⚠️  Skipping row {idx} due to error: {e}")
+                # print(f"⚠️  Skipping row {idx} due to error: {e}")
                 continue
         
         print(f"\n✅ Processing complete!")

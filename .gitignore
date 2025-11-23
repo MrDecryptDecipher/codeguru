@@ -146,3 +146,4 @@ temp
 venv
 temp_kaggle_data
 electron/leetcode_kb.json/
+electron/leetcode_solutions_kb.json
