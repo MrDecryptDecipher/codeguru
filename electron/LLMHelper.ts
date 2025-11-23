@@ -198,15 +198,18 @@ REQUIREMENTS:
 OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
 {
   "solution": {
-    "code": "Complete Python solution with optimal time complexity",
+    "code": "CLEAN Python code - NO COMMENTS, NO # Step explanations, EXECUTABLE code only",
     "problem_statement": "One-line summary of the problem",
-    "context": "Algorithm type (DP/Greedy/Graph/etc) and Time: O(?), Space: O(?)",
-    "suggested_responses": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
-    "reasoning": "Why this approach is optimal. Edge cases handled: ..."
+    "context": "Algorithm used and complexity: e.g., 'Dynamic Programming. Time: O(n*k), Space: O(n)'",
+    "suggested_responses": ["Key insight 1", "Key insight 2", "Key insight 3"],
+    "reasoning": "Full explanation: Why this approach works, algorithm steps, edge cases handled"
   }
 }
 
-CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in code.`
+CRITICAL RULES:
+1. "code" field: ZERO comments, ZERO explanations, ONLY executable Python
+2. "reasoning" field: Put ALL explanations here, including step-by-step algorithm
+3. Return ONLY valid JSON. No markdown blocks, no triple quotes in code.`
 
     console.log("[LLMHelper] Calling LLM for solution...");
     try {
