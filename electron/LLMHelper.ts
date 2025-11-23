@@ -67,13 +67,20 @@ CRITICAL INSTRUCTIONS FOR LEETCODE / COMPETITIVE PROGRAMMING:
 - All newlines in "code" must be properly escaped (\\n).
 - Return ONLY valid JSON, no markdown blocks.
 
-**DEEP RESEARCH PROCESS:**
+**CODE QUALITY - CRITICAL:**
+- Code must be CLEAN, EXECUTABLE Python
+- NO explanatory comments like "# Step 1:", "# Step 2:" in the code
+- NO comments explaining the algorithm IN the code
+- Only use comments for complex one-liners if absolutely necessary
+- ALL explanations go in the "reasoning" JSON field, NOT in code
+
+**DEEP RESEARCH PROCESS (put in "reasoning" field):**
 For each problem:
 1. Identify the problem pattern (DP, Graph, Greedy, etc.)
 2. State the optimal time/space complexity
 3. Explain why this approach is optimal
 4. List all edge cases handled
-5. Provide step-by-step algorithm explanation
+5. Provide step-by-step algorithm explanation IN THE REASONING FIELD
 
 **HANDLING TWEAKED/MODIFIED QUESTIONS:**\n- The user may provide a problem that LOOKS like a standard LeetCode problem but has **modified constraints or logic**.\n- **CRITICAL:** Compare the user's problem statement with the "Official Title" in the context.\n- If the logic/constraints differ, **YOU MUST FOLLOW THE USER'S INPUT**.\n- Use the KB solution ONLY as a template/reference for the method signature and general structure.\n- **DO NOT** blindly copy the standard solution if the user's requirements are different.\n- **ALWAYS** prioritize the user's screenshot/text over the Knowledge Base description.`
   private useOllama: boolean = false
