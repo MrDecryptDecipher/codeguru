@@ -172,8 +172,12 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
       this.initializeOllamaModel()
     } else if (apiKey) {
       const genAI = new GoogleGenerativeAI(apiKey)
-      this.model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
-      console.log("[LLMHelper] Using Google Gemini")
+      // Use v1beta to access latest Gemini 2.0/3.0 models
+      this.model = genAI.getGenerativeModel(
+        { model: "gemini-2.0-flash" },
+        { apiVersion: "v1beta" } as any
+      )
+      console.log("[LLMHelper] Using Google Gemini (v1beta)")
     } else {
       throw new Error("Either provide API key for Gemini/OpenRouter or enable Ollama mode")
     }
@@ -806,13 +810,17 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
   public async switchToGemini(apiKey?: string): Promise<void> {
     if (apiKey) {
       const genAI = new GoogleGenerativeAI(apiKey);
-      this.model = genAI.getGenerativeModel({
-        model: "gemini-2.0-flash",
-        generationConfig: {
-          maxOutputTokens: 8192,
-          temperature: 0.7
-        }
-      });
+      // Use v1beta to access latest Gemini 2.0/3.0 models
+      this.model = genAI.getGenerativeModel(
+        {
+          model: "gemini-2.0-flash",
+          generationConfig: {
+            maxOutputTokens: 8192,
+            temperature: 0.7
+          }
+        },
+        { apiVersion: "v1beta" } as any
+      );
     }
 
     if (!this.model && !apiKey) {

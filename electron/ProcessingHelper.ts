@@ -33,7 +33,7 @@ if (fs.existsSync(envPath)) {
 function readOpenRouterEnvConfig(): { apiKey: string; models: string[] } | null {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim()
   // Use default models if not provided in env
-  const modelsRaw = process.env.OPENROUTER_MODELS || "google/gemini-2.0-flash-exp:free,google/gemini-2.0-pro-exp-02-05:free,google/gemini-2.0-flash-thinking-exp:free,deepseek/deepseek-r1:free,qwen/qwen-vl-plus:free,qwen/qwen-2.5-coder-32b-instruct:free,meta-llama/llama-3.3-70b-instruct:free,nvidia/llama-3.1-nemotron-70b-instruct:free"
+  const modelsRaw = process.env.OPENROUTER_MODELS || "x-ai/grok-4.1-fast:free,kwaipilot/kat-coder-pro:free,nvidia/nemotron-nano-12b-v2-vl:free,alibaba/tongyi-deepresearch-30b-a3b:free,meituan/longcat-flash-chat:free,nvidia/nemotron-nano-9b-v2:free,openai/gpt-oss-20b:free,z-ai/glm-4.5-air:free,qwen/qwen3-coder:free,moonshotai/kimi-k2:free,google/gemma-3n-e2b-it:free,tngtech/deepseek-r1t2-chimera:free,deepseek/deepseek-r1-0528:free"
 
   if (!apiKey) {
     return null

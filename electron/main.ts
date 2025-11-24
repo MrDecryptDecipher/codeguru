@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Tray, Menu, nativeImage } from "electron"
+import { app, BrowserWindow, Tray, Menu, nativeImage, globalShortcut, clipboard } from "electron"
 import { initializeIpcHandlers } from "./ipcHandlers"
 import { WindowHelper } from "./WindowHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
@@ -207,7 +207,7 @@ export class AppState {
   public createTray(): void {
     // Create a simple tray icon
     const image = nativeImage.createEmpty()
-    
+
     // Try to use a system template image for better integration
     let trayImage = image
     try {
@@ -217,9 +217,9 @@ export class AppState {
       console.log("Using empty tray image")
       trayImage = nativeImage.createEmpty()
     }
-    
+
     this.tray = new Tray(trayImage)
-    
+
     const contextMenu = Menu.buildFromTemplate([
       {
         label: 'Show Interview Coder',
@@ -265,15 +265,15 @@ export class AppState {
         }
       }
     ])
-    
+
     this.tray.setToolTip('Interview Coder - Press Cmd+Shift+Space to show')
     this.tray.setContextMenu(contextMenu)
-    
+
     // Set a title for macOS (will appear in menu bar)
     if (process.platform === 'darwin') {
       this.tray.setTitle('IC')
     }
-    
+
     // Double-click to show window
     this.tray.on('double-click', () => {
       this.centerAndShowWindow()
@@ -302,10 +302,35 @@ async function initializeApp() {
     appState.createTray()
     // Register global shortcuts using ShortcutsHelper
     appState.shortcutsHelper.registerGlobalShortcuts()
-    
+
+    // REGISTER MANUAL HOTKEY (Ctrl+Shift+L) for LeetCode workflow
+    globalShortcut.register('CommandOrControl+Shift+L', async () => {
+      console.log('[Manual Hotkey] Ctrl+Shift+L triggered: Analyzing clipboard...')
+
+      // 1. Get current clipboard text
+      const clipboardText = clipboard.readText()
+
+      if (!clipboardText || clipboardText.trim().length === 0) {
+        console.log('[Manual Hotkey] Clipboard is empty, ignoring')
+        return
+      }
+
+      // 2. Process clipboard text (same as auto-monitor)
+      await appState.processingHelper.processClipboardText(clipboardText)
+
+      // 3. Bring window to front
+      const mainWindow = appState.getMainWindow()
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    })
+    console.log('[Manual Hotkey] Ctrl+Shift+L registration attempted')
+
+
     // Start clipboard monitoring
     appState.clipboardMonitor.start()
-    
+
     // Listen for code detection events
     appState.clipboardMonitor.on('code-detected', (detection) => {
       console.log('[Main] Code detected:', detection)
@@ -328,6 +353,12 @@ async function initializeApp() {
     if (process.platform !== "darwin") {
       app.quit()
     }
+  })
+
+  // Unregister all global shortcuts when quitting
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll()
+    console.log('[App] Unregistered all global shortcuts')
   })
 
   app.dock?.hide() // Hide dock icon (optional)
