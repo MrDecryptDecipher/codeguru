@@ -380,8 +380,30 @@ export class ProcessingHelper {
     const conversationId = this.conversationManager.createConversation('Clipboard Processing')
 
     try {
+      // EXTRACT CODE STUB from clipboard text
+      // Look for Python class/def pattern, Java/C++ method signature, etc.
+      let codeStub = "";
+      let problemDescription = text;
+
+      // Python pattern: class Solution: followed by def methodName
+      const pythonMatch = text.match(/(class\s+\w+:\s*\n\s*def\s+\w+\([^)]*\)\s*->\s*[^:]+:)/);
+      if (pythonMatch) {
+        codeStub = pythonMatch[1];
+        console.log(`[ProcessingHelper] Extracted Python code stub: ${codeStub.substring(0, 80)}...`);
+      }
+
+      // C++/Java pattern: public/static ReturnType methodName(...)
+      if (!codeStub) {
+        const cppJavaMatch = text.match(/((?:public|static|private)?\s*\w+\s+\w+\s*\([^)]*\))/);
+        if (cppJavaMatch) {
+          codeStub = cppJavaMatch[1];
+          console.log(`[ProcessingHelper] Extracted C++/Java code stub: ${codeStub.substring(0, 80)}...`);
+        }
+      }
+
       const problemInfo = {
-        problem_statement: text,
+        problem_statement: problemDescription,
+        code_stub: codeStub || undefined, // Add extracted code stub
         input_format: { description: "Generated from clipboard text", parameters: [] as any[] },
         output_format: { description: "Generated from clipboard text", type: "string", subtype: "text" },
         complexity: { time: "N/A", space: "N/A" },
