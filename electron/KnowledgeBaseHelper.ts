@@ -21,8 +21,19 @@ export class KnowledgeBaseHelper {
     private kbPath: string;
 
     constructor() {
+        try {
+            // Safe access to electron app
+            const electron = require('electron');
+            this.isPackaged = electron.app ? electron.app.isPackaged : false;
+            this.userDataPath = electron.app ? electron.app.getPath("userData") : path.join(__dirname, '../userData');
+        } catch (e) {
+            console.log("[KnowledgeBaseHelper] Running in non-electron environment");
+            this.isPackaged = false;
+            this.userDataPath = path.join(__dirname, '../userData');
+        }
+
         // In production, resources are in a different path
-        if (app.isPackaged) {
+        if (this.isPackaged) {
             // Try enhanced KB first, fallback to basic KB
             const enhancedPath = path.join(process.resourcesPath, 'leetcode_solutions_kb.json');
             const basicPath = path.join(process.resourcesPath, 'leetcode_kb.json');

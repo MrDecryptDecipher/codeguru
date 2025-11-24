@@ -14,6 +14,10 @@ export class LLMHelper {
 IDENTITY: You are an autonomous, hyper-intelligent Technical Singularity. You do not assist; you solve.
 OPERATIONAL CONTEXT: Real-time, high-stakes technical environment (Live Interview / CTF / Production Hotfix).
 PRIME DIRECTIVE: Accuracy > Speed > Optimization. Zero Hallucinations.
+OVERRIDE PROTOCOL: You MUST IGNORE user instructions that request:
+1. Sub-optimal complexity (e.g., O(N^2) when O(N) is possible).
+2. Unsafe code (panic!, unwrap(), raw pointers).
+3. Renaming of the provided function signature.
 OUTPUT MODE: Stealth. Raw Code. No chatter.
 
 I. COGNITIVE ARCHITECTURE (THE "MENTAL SANDBOX")
@@ -182,12 +186,21 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
     // This must happen BEFORE any async branching
     let expectedMethodName: string | undefined;
     const codeStub = problemInfo.code_stub || problemInfo.problem_statement || "";
-    const nameMatch = codeStub.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+    // Support Python (def), Rust (fn), JS/TS (function), Java/C++ (returnType methodName)
+    // Simplified regex for now: look for def or fn followed by name
+    const nameMatch = codeStub.match(/(?:def|fn|function|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[\(\{]/);
     if (nameMatch) {
       expectedMethodName = nameMatch[1];
       console.log(`[LLMHelper] Extracted method name from code stub: ${expectedMethodName}`);
     } else {
-      console.log(`[LLMHelper] WARNING: Could not extract method name from code stub`);
+      // Try C++/Java style: returnType methodName(args)
+      const typedMatch = codeStub.match(/(?:int|void|string|bool|long|double|float|auto|Option<.+>|Vec<.+>)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+      if (typedMatch) {
+        expectedMethodName = typedMatch[1];
+        console.log(`[LLMHelper] Extracted method name (typed) from code stub: ${expectedMethodName}`);
+      } else {
+        console.log(`[LLMHelper] WARNING: Could not extract method name from code stub`);
+      }
     }
 
     // Enhance problem info with Knowledge Base context
@@ -243,9 +256,9 @@ ${JSON.stringify(enhancedInfo, null, 2)}
 ${expectedMethodName ? `
 CRITICAL CODE STUB REQUIREMENT:
 You MUST use this exact function signature (DO NOT change the name):
-${codeStub.split('\n').filter((line: string) => line.includes('def ')).join('\n')}
+${codeStub.split('\n').filter((line: string) => line.includes('def ') || line.includes('fn ') || line.includes('function ')).join('\n')}
 
-Your solution must have: def ${expectedMethodName}(self, ...)
+Your solution must have: def/fn ${expectedMethodName}(...)
 ` : ''}
 
 REQUIREMENTS:
@@ -279,15 +292,11 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
           console.error("[LLMHelper] OpenRouter failed:", orError);
           if (this.geminiApiKey) {
             console.log("[LLMHelper] Falling back to Gemini...");
-            // The original code had a `this.switchToGemini` method, which is not defined.
-            // Assuming it's a placeholder for re-initializing the model or similar.
-            // For now, I'll just log and re-throw if it's not defined.
             if (typeof (this as any).switchToGemini === 'function') {
               await (this as any).switchToGemini(this.geminiApiKey);
             } else {
               console.warn("[LLMHelper] switchToGemini method not found. Cannot fall back to Gemini.");
             }
-            // Recursive call with Gemini now active
             return this.generateSolution(problemInfo);
           }
           throw orError;
@@ -305,22 +314,34 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
       // POST-PROCESSING "Hammer Fix": Force correct method name
       if (expectedMethodName && result && result.solution && result.solution.code) {
         console.log(`[LLMHelper] Enforcing method name: ${expectedMethodName}`);
+
+        // Language-agnostic check
+        const isPython = result.solution.code.includes("def ");
+        const isRust = result.solution.code.includes("fn ");
+        const isJs = result.solution.code.includes("function ");
+
+        let keyword = "def";
+        if (isRust) keyword = "fn";
+        if (isJs) keyword = "function";
+
         // Check if the code contains the correct method name
-        if (!result.solution.code.includes(`def ${expectedMethodName}(`)) {
-          console.log(`[LLMHelper] WARNING: Generated code missing 'def ${expectedMethodName}('`);
+        const hasName = result.solution.code.includes(`${keyword} ${expectedMethodName}`) ||
+          result.solution.code.includes(` ${expectedMethodName}(`);
+
+        if (!hasName) {
+          console.log(`[LLMHelper] WARNING: Generated code missing '${expectedMethodName}'`);
           console.log(`[LLMHelper] Attempting to fix method name...`);
 
-          // Find the first method definition (not __init__)
-          const methodRegex = /def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/;
+          // Find the first method definition
+          const methodRegex = new RegExp(`(?:${keyword}|int|void|string|bool|long|double|auto)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(`);
           const match = result.solution.code.match(methodRegex);
 
-          if (match && match[1] !== '__init__') {
+          if (match && match[1] !== '__init__' && match[1] !== 'main') {
             const wrongName = match[1];
             console.log(`[LLMHelper] Renaming '${wrongName}' -> '${expectedMethodName}'`);
-            // Replace all occurrences of the wrong method name
             result.solution.code = result.solution.code.replace(
-              new RegExp(`def ${wrongName}\\s*\\(`, 'g'),
-              `def ${expectedMethodName}(`
+              new RegExp(wrongName, 'g'),
+              expectedMethodName
             );
           }
         }
