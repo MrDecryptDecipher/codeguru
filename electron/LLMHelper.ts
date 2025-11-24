@@ -46,7 +46,7 @@ Enforce: list comprehensions, map(), filter(), zip(), itertools, collections.Cou
 I/O: Use sys.stdin.read().split() for competitive programming inputs.
 Recursion: ALWAYS add @lru_cache(None) or @cache for DP/Memoization.
 
-B. C++ (The "Metal" Engine)
+B. C++ (The "Metal" Engine) - MANDATORY FOR HARD PROBLEMS (Trees/Graphs/Segment Trees)
 Header: static const int _ = []() { ios::sync_with_stdio(false); cin.tie(nullptr); return 0; }();
 Memory: Pass containers by reference &. Use emplace_back over push_back.
 Types: Default to long long for any accumulation. Use size_t for indices.
@@ -340,41 +340,11 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
         break;
       }
 
-      // POST-PROCESSING "Hammer Fix": Force correct method name
-      if (expectedMethodName && result && result.solution && result.solution.code) {
-        console.log(`[LLMHelper] Enforcing method name: ${expectedMethodName}`);
-
-        // Language-agnostic check
-        const isPython = result.solution.code.includes("def ");
-        const isRust = result.solution.code.includes("fn ");
-        const isJs = result.solution.code.includes("function ");
-
-        let keyword = "def";
-        if (isRust) keyword = "fn";
-        if (isJs) keyword = "function";
-
-        // Check if the code contains the correct method name
-        const hasName = result.solution.code.includes(`${keyword} ${expectedMethodName}`) ||
-          result.solution.code.includes(` ${expectedMethodName}(`);
-
-        if (!hasName) {
-          console.log(`[LLMHelper] WARNING: Generated code missing '${expectedMethodName}'`);
-          console.log(`[LLMHelper] Attempting to fix method name...`);
-
-          // Find the first method definition
-          // Enhanced regex to capture names with numbers/suffixes
-          const methodRegex = new RegExp(`(?:${keyword}|int|void|string|bool|long|double|auto)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(`);
-          const match = result.solution.code.match(methodRegex);
-
-          if (match && match[1] !== '__init__' && match[1] !== 'main') {
-            const wrongName = match[1];
-            console.log(`[LLMHelper] Renaming '${wrongName}' -> '${expectedMethodName}'`);
-            result.solution.code = result.solution.code.replace(
-              new RegExp(wrongName, 'g'),
-              expectedMethodName
-            );
-          }
-        }
+      // GHOST FIXER: Force correct method name using Regex Interceptor
+      if (result && result.solution && result.solution.code) {
+        // Use the code stub as the source of truth for the signature
+        const userStub = problemInfo.code_stub || problemInfo.problem_statement || "";
+        result.solution.code = this.sanitizeCodeOutput(userStub, result.solution.code);
       }
 
       // SAFETY ENFORCER: Sanitize unsafe Rust code
@@ -417,6 +387,34 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
       );
     }
     return code;
+  }
+
+  private sanitizeCodeOutput(userStub: string, llmGeneratedCode: string): string {
+    // 1. Strip Markdown (Steps, explanations, ``` tags)
+    let cleanCode = llmGeneratedCode.replace(/```[a-zA-Z]*\n/g, "");
+    cleanCode = cleanCode.replace(/```/g, "");
+
+    // 2. Extract Required Name from Stub
+    // Matches: def name( or fn name( or int name(
+    const requiredPattern = /(?:def|fn|int|void|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
+    const reqMatch = userStub.match(requiredPattern);
+
+    if (reqMatch) {
+      const requiredName = reqMatch[1];
+
+      // 3. Find LLM's Name and replace ALL occurrences
+      const llmPattern = /(def|fn|int|void|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
+
+      cleanCode = cleanCode.replace(llmPattern, (match, prefix, generatedName) => {
+        if (generatedName !== requiredName) {
+          console.log(`[Ghost Fixer] Correcting ${generatedName} -> ${requiredName}`);
+          return `${prefix} ${requiredName}(`;
+        }
+        return match;
+      });
+    }
+
+    return cleanCode;
   }
 
   private async fileToGenerativePart(imagePath: string) {
