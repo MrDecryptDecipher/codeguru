@@ -293,7 +293,7 @@ export class ProcessingHelper {
           }
         );
 
-        const normalizedSolution = rawSolution?.solution
+        const normalizedSolution = (rawSolution as any)?.solution
           ? rawSolution
           : { solution: rawSolution };
 
