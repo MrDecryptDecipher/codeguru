@@ -395,24 +395,42 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
     cleanCode = cleanCode.replace(/```/g, "");
 
     // 2. Extract Required Name from Stub
-    // Matches: def name( or fn name( or int name(
-    const requiredPattern = /(?:def|fn|int|void|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
+    // Matches: def name( or fn name( or int name( or public ReturnType name(
+    const requiredPattern = /(?:def|fn|int|void|long|double|float|bool|string|char|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
     const reqMatch = userStub.match(requiredPattern);
 
-    if (reqMatch) {
-      const requiredName = reqMatch[1];
-
-      // 3. Find LLM's Name and replace ALL occurrences
-      const llmPattern = /(def|fn|int|void|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
-
-      cleanCode = cleanCode.replace(llmPattern, (match, prefix, generatedName) => {
-        if (generatedName !== requiredName) {
-          console.log(`[Ghost Fixer] Correcting ${generatedName} -> ${requiredName}`);
-          return `${prefix} ${requiredName}(`;
-        }
-        return match;
-      });
+    if (!reqMatch) {
+      console.log("[Ghost Fixer] WARNING: Could not extract required method name from stub");
+      return cleanCode;
     }
+
+    const requiredName = reqMatch[1];
+    console.log(`[Ghost Fixer] Required method name from stub: ${requiredName}`);
+
+    // 3. Find the ACTUAL method name the LLM generated
+    // This regex finds the first function/method definition in the code
+    const llmPattern = /(def|fn|int|void|long|double|float|bool|string|char|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
+    const llmMatch = cleanCode.match(llmPattern);
+
+    if (!llmMatch) {
+      console.log("[Ghost Fixer] WARNING: Could not find any method definition in generated code");
+      return cleanCode;
+    }
+
+    const generatedName = llmMatch[2];
+
+    if (generatedName === requiredName) {
+      console.log(`[Ghost Fixer] Method name already correct: ${requiredName}`);
+      return cleanCode;
+    }
+
+    // 4. GLOBAL REPLACEMENT: Replace ALL occurrences of the wrong name
+    console.log(`[Ghost Fixer] FORCING GLOBAL RENAME: '${generatedName}' -> '${requiredName}'`);
+
+    // Use a global regex to replace ALL occurrences (not just the first one)
+    // This ensures method calls, references, etc. are also updated
+    const globalReplaceRegex = new RegExp(`\\b${generatedName}\\b`, 'g');
+    cleanCode = cleanCode.replace(globalReplaceRegex, requiredName);
 
     return cleanCode;
   }
