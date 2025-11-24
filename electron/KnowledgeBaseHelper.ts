@@ -19,6 +19,8 @@ export class KnowledgeBaseHelper {
     private kb: Record<string, KBProblem> = {};
     private isLoaded: boolean = false;
     private kbPath: string;
+    private isPackaged: boolean;
+    private userDataPath: string;
 
     constructor() {
         try {
