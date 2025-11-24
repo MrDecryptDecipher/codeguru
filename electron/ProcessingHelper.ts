@@ -381,15 +381,27 @@ export class ProcessingHelper {
 
     try {
       // EXTRACT CODE STUB from clipboard text
-      // Look for Python class/def pattern, Java/C++ method signature, etc.
+      console.log(`[ProcessingHelper] Clipboard text length: ${text.length}`);
+      console.log(`[ProcessingHelper] First 200 chars: ${text.substring(0, 200)}`);
+
       let codeStub = "";
       let problemDescription = text;
 
       // Python pattern: class Solution: followed by def methodName
-      const pythonMatch = text.match(/(class\s+\w+:\s*\n\s*def\s+\w+\([^)]*\)\s*->\s*[^:]+:)/);
+      // Use \s+ to handle any whitespace (spaces, tabs, newlines, \r\n)
+      const pythonMatch = text.match(/(class\s+\w+:\s+def\s+\w+\s*\([^)]*\)\s*->\s*[^:]+:)/s);
       if (pythonMatch) {
         codeStub = pythonMatch[1];
-        console.log(`[ProcessingHelper] Extracted Python code stub: ${codeStub.substring(0, 80)}...`);
+        console.log(`[ProcessingHelper] ✅ Extracted Python code stub: ${codeStub}`);
+      } else {
+        console.log(`[ProcessingHelper] ⚠️ Failed to extract Python stub, trying simpler pattern...`);
+
+        // Try simpler pattern: just def methodName
+        const simpleDefMatch = text.match(/(def\s+(\w+)\s*\([^)]*\)\s*->\s*[^:]+:)/);
+        if (simpleDefMatch) {
+          codeStub = simpleDefMatch[1];
+          console.log(`[ProcessingHelper] ✅ Extracted simple Python stub: ${codeStub}`);
+        }
       }
 
       // C++/Java pattern: public/static ReturnType methodName(...)
@@ -397,8 +409,12 @@ export class ProcessingHelper {
         const cppJavaMatch = text.match(/((?:public|static|private)?\s*\w+\s+\w+\s*\([^)]*\))/);
         if (cppJavaMatch) {
           codeStub = cppJavaMatch[1];
-          console.log(`[ProcessingHelper] Extracted C++/Java code stub: ${codeStub.substring(0, 80)}...`);
+          console.log(`[ProcessingHelper] ✅ Extracted C++/Java code stub: ${codeStub}`);
         }
+      }
+
+      if (!codeStub) {
+        console.log(`[ProcessingHelper] ❌ NO CODE STUB EXTRACTED - Ghost Fixer will not work!`);
       }
 
       const problemInfo = {
@@ -411,6 +427,8 @@ export class ProcessingHelper {
         validation_type: "manual",
         difficulty: "custom"
       };
+
+      console.log(`[ProcessingHelper] problemInfo.code_stub = ${problemInfo.code_stub || 'UNDEFINED'}`);
 
       // Add to conversation
       await this.conversationManager.addMessage('user', 'Clipboard text processed', {});
