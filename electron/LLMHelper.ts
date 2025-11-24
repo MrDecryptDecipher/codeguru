@@ -248,7 +248,17 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
     }
 
 
-    const prompt = `${this.systemPrompt}
+    console.log("[LLMHelper] Calling LLM for solution...");
+    try {
+      let result;
+      let attempts = 0;
+      const maxAttempts = 2;
+
+      while (attempts < maxAttempts) {
+        attempts++;
+
+        // GENERATE PROMPT INSIDE LOOP (so hints/penalties are included)
+        const prompt = `${this.systemPrompt}
 
 PROBLEM TO SOLVE:
 ${JSON.stringify(enhancedInfo, null, 2)}
@@ -279,16 +289,7 @@ OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
   }
 }
 
-CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in code. NO "Step 1:" prefixes in suggested_responses.`
-
-    console.log("[LLMHelper] Calling LLM for solution...");
-    try {
-      let result;
-      let attempts = 0;
-      const maxAttempts = 2;
-
-      while (attempts < maxAttempts) {
-        attempts++;
+CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in code. NO "Step 1:" prefixes in suggested_responses.`;
 
         if (this.useOpenRouter && this.openRouterHelper) {
           try {
@@ -324,15 +325,18 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
           const isBruteForce = context.includes("brute-force") ||
             context.includes("o(n^2)") ||
             context.includes("o(n^3)") ||
-            reasoning.includes("brute-force");
+            context.includes("nested loop") ||
+            reasoning.includes("brute-force") ||
+            reasoning.includes("o(n^2)") ||
+            reasoning.includes("o(n^3)");
 
           if (isBruteForce && attempts < maxAttempts) {
-            console.log(`[LLMHelper] DETECTED BRUTE-FORCE SOLUTION (Attempt ${attempts}/${maxAttempts}). REJECTING.`);
+            console.log(`[LLMHelper] ⚠️ DETECTED BRUTE-FORCE SOLUTION (Attempt ${attempts}/${maxAttempts}). REJECTING.`);
             console.log(`[LLMHelper] Retrying with PENALTY PROMPT...`);
 
             // Modify enhancedInfo to explicitly demand optimization
-            enhancedInfo.hint = "PREVIOUS SOLUTION WAS REJECTED BECAUSE IT WAS BRUTE-FORCE. YOU MUST OPTIMIZE TO O(N) OR O(N LOG N). DO NOT USE NESTED LOOPS.";
-            continue; // Retry loop
+            enhancedInfo.CRITICAL_OVERRIDE = "⚠️ PREVIOUS SOLUTION WAS REJECTED FOR BEING O(N^2) OR O(N^3). YOU MUST USE O(N) OR O(N LOG N). USE HASHMAP/HASHSET/SLIDING WINDOW/TWO POINTERS. DO NOT USE NESTED LOOPS.";
+            continue; // Retry loop with updated enhancedInfo
           }
         }
 
