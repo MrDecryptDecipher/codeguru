@@ -262,10 +262,11 @@ Your solution must have: def/fn ${expectedMethodName}(...)
 ` : ''}
 
 REQUIREMENTS:
-1. Use the MOST OPTIMAL algorithm (prefer O(n), O(n log n), or better)
-2. Handle ALL edge cases (empty, single element, duplicates, negatives)
-3. Write COMPLETE, PRODUCTION-READY code (no placeholders, no "...")
-4. Use the EXACT method name
+1. Use the MOST OPTIMAL algorithm (prefer O(n), O(n log n), or better).
+2. REJECT O(N^2) or O(N^3) unless N <= 1000.
+3. Handle ALL edge cases (empty, single element, duplicates, negatives).
+4. Write COMPLETE, PRODUCTION-READY code (no placeholders, no "...").
+5. Use the EXACT method name.
 
 OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
 {
@@ -278,37 +279,65 @@ OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
   }
 }
 
-CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in code.`
+CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in code. NO "Step 1:" prefixes in suggested_responses.`
 
     console.log("[LLMHelper] Calling LLM for solution...");
     try {
       let result;
+      let attempts = 0;
+      const maxAttempts = 2;
 
-      if (this.useOpenRouter && this.openRouterHelper) {
-        try {
-          result = await this.openRouterHelper.generateSolution(enhancedInfo)
-          console.log("[LLMHelper] OpenRouter returned result.");
-        } catch (orError) {
-          console.error("[LLMHelper] OpenRouter failed:", orError);
-          if (this.geminiApiKey) {
-            console.log("[LLMHelper] Falling back to Gemini...");
-            if (typeof (this as any).switchToGemini === 'function') {
-              await (this as any).switchToGemini(this.geminiApiKey);
-            } else {
-              console.warn("[LLMHelper] switchToGemini method not found. Cannot fall back to Gemini.");
+      while (attempts < maxAttempts) {
+        attempts++;
+
+        if (this.useOpenRouter && this.openRouterHelper) {
+          try {
+            result = await this.openRouterHelper.generateSolution(enhancedInfo)
+            console.log("[LLMHelper] OpenRouter returned result.");
+          } catch (orError) {
+            console.error("[LLMHelper] OpenRouter failed:", orError);
+            if (this.geminiApiKey) {
+              console.log("[LLMHelper] Falling back to Gemini...");
+              if (typeof (this as any).switchToGemini === 'function') {
+                await (this as any).switchToGemini(this.geminiApiKey);
+              }
+              // Recursive call with Gemini now active (reset attempts for new provider)
+              return this.generateSolution(problemInfo);
             }
-            return this.generateSolution(problemInfo);
+            throw orError;
           }
-          throw orError;
+        } else if (this.model) {
+          const genResult = await this.model.generateContent(prompt)
+          console.log("[LLMHelper] Gemini LLM returned result.");
+          const response = await genResult.response
+          const text = this.cleanJsonResponse(response.text())
+          result = JSON.parse(text)
+        } else {
+          throw new Error("No LLM provider configured")
         }
-      } else if (this.model) {
-        const genResult = await this.model.generateContent(prompt)
-        console.log("[LLMHelper] Gemini LLM returned result.");
-        const response = await genResult.response
-        const text = this.cleanJsonResponse(response.text())
-        result = JSON.parse(text)
-      } else {
-        throw new Error("No LLM provider configured")
+
+        // ANTI-BRUTE-FORCE CHECK
+        if (result && result.solution) {
+          const context = (result.solution.context || "").toLowerCase();
+          const reasoning = (result.solution.reasoning || "").toLowerCase();
+
+          const isBruteForce = context.includes("brute-force") ||
+            context.includes("o(n^2)") ||
+            context.includes("o(n^3)") ||
+            reasoning.includes("brute-force");
+
+          if (isBruteForce && attempts < maxAttempts) {
+            console.log(`[LLMHelper] DETECTED BRUTE-FORCE SOLUTION (Attempt ${attempts}/${maxAttempts}). REJECTING.`);
+            console.log(`[LLMHelper] Retrying with PENALTY PROMPT...`);
+
+            // Modify enhancedInfo to explicitly demand optimization
+            enhancedInfo.hint = "PREVIOUS SOLUTION WAS REJECTED BECAUSE IT WAS BRUTE-FORCE. YOU MUST OPTIMIZE TO O(N) OR O(N LOG N). DO NOT USE NESTED LOOPS.";
+            continue; // Retry loop
+          }
+        }
+
+        // If we get here, result is acceptable or we ran out of attempts
+        break;
       }
 
       // POST-PROCESSING "Hammer Fix": Force correct method name
@@ -333,6 +362,7 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
           console.log(`[LLMHelper] Attempting to fix method name...`);
 
           // Find the first method definition
+          // Enhanced regex to capture names with numbers/suffixes
           const methodRegex = new RegExp(`(?:${keyword}|int|void|string|bool|long|double|auto)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(`);
           const match = result.solution.code.match(methodRegex);
 
