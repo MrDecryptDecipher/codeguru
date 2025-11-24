@@ -29,11 +29,15 @@ CRITICAL INSTRUCTIONS FOR LEETCODE / COMPETITIVE PROGRAMMING:
 ═══════════════════════════════════════════════════════════════════
 
 **METHOD NAMING (HIGHEST PRIORITY):**
-- You MUST use the EXACT method name from the problem signature (e.g., \`maximumScore\`, \`twoSum\`, \`lengthOfLongestSubstring\`).
-- NEVER invent method names based on the problem title.
-- For "Maximize Cyclic Partition Score", the method is \`maximumScore\`.
-- Look for the signature in: user input, screenshot, or error messages.
-- If you see "AttributeError: 'Solution' object has no attribute 'X'", the method name is WRONG. Use what the test expects.
+- STEP 1: Look for the method signature in the problem statement (usually shown as: def methodName(...))
+- STEP 2: The method name is EXACTLY what appears after "def" and before the opening parenthesis
+- STEP 3: Copy that method name EXACTLY - do NOT change it, do NOT invent a new name
+- Examples:
+  * If you see "def maximumScore(self, nums, k)" -> use maximumScore
+  * If you see "def longestBalanced(self, s)" -> use longestBalanced
+  * If you see "def twoSum(self, nums, target)" -> use twoSum
+- NEVER invent method names based on the problem title
+- The method name in your code MUST match what's shown in the problem statement EXACTLY
 
 **CODE QUALITY REQUIREMENTS:**
 1. **OPTIMAL COMPLEXITY**: Always use the most efficient algorithm:
