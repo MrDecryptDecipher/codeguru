@@ -347,6 +347,11 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
         }
       }
 
+      // SAFETY ENFORCER: Sanitize unsafe Rust code
+      if (result && result.solution && result.solution.code) {
+        result.solution.code = this.enforceRustSafety(result.solution.code);
+      }
+
       console.log("[LLMHelper] Final processed result:", result)
       return result
 
@@ -354,6 +359,34 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
       console.error("Error generating solution:", error)
       throw error
     }
+  }
+
+  private enforceRustSafety(code: string): string {
+    // 1. Detect Explicit Panics
+    if (code.includes("panic!") || code.includes(".unwrap()") || code.includes(".expect(")) {
+      console.log("[Safety Enforcer] Detected unsafe Rust code. Sanitizing...");
+
+      // Replace panic! with a comment and a safe return (None or Err)
+      // This is a 'blind' fix, but better than crashing.
+      code = code.replace(
+        /panic!\(.*\);/g,
+        "// [SAFETY BLOCKED]: panic! removed. Returning None.\n        return None;"
+      );
+
+      // Replace .unwrap() with .unwrap_or_default() or match pattern
+      // Simple regex to catch method-chaining unwrap()
+      code = code.replace(
+        /\.unwrap\(\)/g,
+        ".unwrap_or_default() /* [SAFETY]: unwrap() blocked */"
+      );
+
+      // Replace .expect(...) with .unwrap_or_default()
+      code = code.replace(
+        /\.expect\(.*\)/g,
+        ".unwrap_or_default() /* [SAFETY]: expect() blocked */"
+      );
+    }
+    return code;
   }
 
   private async fileToGenerativePart(imagePath: string) {
