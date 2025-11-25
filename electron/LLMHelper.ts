@@ -358,22 +358,59 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
   }
 
   public sanitizeCodeOutput(generatedCode: string, enforcedName: string): string {
+    // 1. Clean Markdown
     let cleanCode = generatedCode.replace(/```[a-z]*\n/g, '').replace(/```/g, '').trim();
 
-    // REMOVE BOILERPLATE
+    // 2. JSON Unwrap (Fixing the "UI generated full stuff" issue)
+    // Sometimes models wrap code in {"solution": {"code": "..."}}
+    if (cleanCode.trim().startsWith('{')) {
+      try {
+        const json = JSON.parse(cleanCode);
+        if (json.solution && json.solution.code) {
+          cleanCode = json.solution.code;
+        } else if (json.code) {
+          cleanCode = json.code;
+        }
+      } catch (e) {
+        // Not valid JSON, treat as raw code
+      }
+    }
+
+    // 3. REMOVE BOILERPLATE
     cleanCode = cleanCode.replace(/class ListNode:\s+def __init__[\s\S]+?self\.next = next\s*/g, '');
     cleanCode = cleanCode.replace(/# Definition for singly-linked list\.\s*/g, '');
     cleanCode = cleanCode.replace(/class TreeNode:\s+def __init__[\s\S]+?self\.right = right\s*/g, '');
 
-    // GHOST FIXER: Enforce the Architect's Name
-    const aiFuncRegex = /def\s+([a-zA-Z0-9_]+)\s*\(/g;
-    cleanCode = cleanCode.replace(aiFuncRegex, (fullMatch, aiName) => {
-      if (aiName !== enforcedName) {
-        console.log(`👻 Ghost Fixer: Architect overruled '${aiName}' -> '${enforcedName}'`);
-        return `def ${enforcedName}(`;
+    // 4. SMART GHOST FIXER
+    // First, check if the enforced name ALREADY exists.
+    const existsRegex = new RegExp(`def\\s+${enforcedName}\\s*\\(`);
+    if (existsRegex.test(cleanCode)) {
+      console.log(`👻 Ghost Fixer: Function '${enforcedName}' found. No renaming needed.`);
+      return cleanCode;
+    }
+
+    // If missing, ONLY rename the main function inside 'class Solution'
+    console.log(`👻 Ghost Fixer: Function '${enforcedName}' missing. Hunting for candidate...`);
+
+    const solutionMatch = cleanCode.match(/class\s+Solution:\s*([\s\S]*)/);
+    if (solutionMatch) {
+      // Look for the first method in Solution that isn't __init__
+      const classBody = solutionMatch[1];
+      const methodMatch = classBody.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+
+      if (methodMatch) {
+        const candidate = methodMatch[1];
+        // SAFEGUARD: Do not rename __init__ or standard helpers
+        const reserved = ["__init__", "push", "pull", "update", "query", "build"];
+
+        if (!reserved.includes(candidate) && candidate !== enforcedName) {
+          console.log(`👻 Ghost Fixer: Renaming '${candidate}' -> '${enforcedName}'`);
+          // Replace ONLY this specific function name
+          const specificRegex = new RegExp(`def\\s+${candidate}\\s*\\(`, 'g');
+          cleanCode = cleanCode.replace(specificRegex, `def ${enforcedName}(`);
+        }
       }
-      return fullMatch;
-    });
+    }
 
     return cleanCode;
   }
