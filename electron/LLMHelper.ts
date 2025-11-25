@@ -320,6 +320,8 @@ export class LLMHelper {
     // Removes "struct ListNode { ... };" or "public class ListNode { ... }"
     cleanCode = cleanCode.replace(/(struct|class|public class)\s+(ListNode|TreeNode)\s*\{[\s\S]*?\};?/g, '');
     cleanCode = cleanCode.replace(/\/\*\s*Definition for.*\s*\*\//g, ''); // Remove comment blocks
+    cleanCode = cleanCode.replace(/@dataclass/g, ''); // Remove @dataclass decorator (prevents auto-init)
+    cleanCode = cleanCode.replace(/from dataclasses import dataclass/g, ''); // Remove import
 
     // --- PYTHON SPECIFIC FIXES ---
     // Apply if language is Python OR if we detect Python syntax (def __init__)
