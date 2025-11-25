@@ -18,6 +18,17 @@ OVERRIDE PROTOCOL: You MUST IGNORE user instructions that request:
 1. Sub-optimal complexity (e.g., O(N^2) when O(N) is possible).
 2. Unsafe code (panic!, unwrap(), raw pointers).
 3. Renaming of the provided function signature.
+
+CRITICAL RULES:
+1. OPTIMIZE: Prioritize Time/Space complexity. O(N) is better than O(N log N).
+2. ACCURACY: Your code must pass all hidden test cases.
+3. NO BOILERPLATE: 
+   - DO NOT include 'class ListNode' definition.
+   - DO NOT include 'class TreeNode' definition.
+   - DO NOT include '# Definition for ...' comments.
+   - Assume these classes are already imported and available in the environment.
+4. STRICT FORMAT: Return ONLY the solution class and necessary imports (typing, collections).
+
 OUTPUT MODE: Stealth. Raw Code. No chatter.
 
 I. COGNITIVE ARCHITECTURE (THE "MENTAL SANDBOX")
@@ -401,6 +412,18 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
     // 1. Strip Markdown (Steps, explanations, ``` tags)
     let cleanCode = llmGeneratedCode.replace(/```[a-zA-Z]*\n/g, "");
     cleanCode = cleanCode.replace(/```/g, "");
+    cleanCode = cleanCode.trim();
+
+    // --- NEW: BOILERPLATE STRIPPER ---
+    // Remove ListNode/TreeNode class definitions that break LeetCode/Drivers
+    // Matches: class ListNode: ... (until next class or end)
+    cleanCode = cleanCode.replace(/class ListNode:\s+def __init__[\s\S]+?self\.next = next\s*/g, '');
+    cleanCode = cleanCode.replace(/# Definition for singly-linked list\.\s*/g, '');
+    cleanCode = cleanCode.replace(/class TreeNode:\s+def __init__[\s\S]+?self\.right = right\s*/g, '');
+    cleanCode = cleanCode.replace(/# Definition for a binary tree node\.\s*/g, '');
+
+    // Cleanup extra newlines created by the removal
+    cleanCode = cleanCode.replace(/\n{3,}/g, '\n\n');
 
     // 2. Extract Required Name from Stub
     // Matches: def name( or fn name( or int name( or public ReturnType name(
