@@ -128,9 +128,9 @@ export class LLMHelper {
 
       const genAI = new GoogleGenerativeAI(apiKey);
 
-      // SPECIFIC MODEL ID: gemini-exp-1121 (November 2024 Preview)
+      // SPECIFIC MODEL ID: gemini-3-pro-preview (as requested)
       const model = genAI.getGenerativeModel(
-        { model: "gemini-exp-1121" },
+        { model: "gemini-3-pro-preview" },
         { apiVersion: "v1beta" } as any
       );
 
