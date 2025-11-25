@@ -125,6 +125,9 @@ export class CodeExecutor {
   /**
    * Execute code with test cases
    */
+  /**
+   * Execute code with test cases
+   */
   async runTests(
     code: string,
     testCases: TestCase[],
@@ -138,7 +141,15 @@ export class CodeExecutor {
 
       try {
         if (language === 'python') {
-          result = await this.executePython(code, testCase.input);
+          // DYNAMIC DRIVER GENERATION
+          // If the code is a Solution class without a driver, wrap it.
+          if (code.includes("class Solution:") && !code.includes("if __name__ == \"__main__\":")) {
+            const driverCode = this.generatePythonDriver(code, testCase.input);
+            // Execute without passing input as stdin, because it's embedded in the driver
+            result = await this.executePython(driverCode);
+          } else {
+            result = await this.executePython(code, testCase.input);
+          }
         } else {
           result = await this.executeJavaScript(code, testCase.input);
         }
@@ -166,6 +177,92 @@ export class CodeExecutor {
     }
 
     return results;
+  }
+
+  private extractFunctionName(code: string): string {
+    // Look for the function definition inside the Solution class
+    const match = code.match(/class\s+Solution:[\s\S]*?def\s+([a-zA-Z0-9_]+)\s*\(/);
+    if (match) {
+      return match[1];
+    }
+    // Fallback: Look for any top-level function if class isn't strict
+    const simpleMatch = code.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+    return simpleMatch ? simpleMatch[1] : "solve";
+  }
+
+  private generatePythonDriver(userSolution: string, input: string): string {
+    const funcName = this.extractFunctionName(userSolution);
+
+    // Robust driver that handles imports and calling the method
+    return `
+import sys
+import json
+from typing import *
+import collections
+import math
+import itertools
+import functools
+import heapq
+import bisect
+
+# Common LeetCode imports
+List = List
+Optional = Optional
+
+# Mock ListNode/TreeNode if not present to prevent errors
+if 'ListNode' not in locals():
+    class ListNode:
+        def __init__(self, val=0, next=None):
+            self.val = val
+            self.next = next
+
+if 'TreeNode' not in locals():
+    class TreeNode:
+        def __init__(self, val=0, left=None, right=None):
+            self.val = val
+            self.left = left
+            self.right = right
+
+${userSolution}
+
+def _driver():
+    try:
+        sol = Solution()
+        # DYNAMICALLY CALL THE FUNCTION
+        # We use getattr to call the method by string name!
+        method = getattr(sol, "${funcName}") 
+        
+        # Input handling: Try to evaluate the input string as Python literal
+        # This handles cases like "[1,2,3], 4" or "1, 2"
+        # We wrap it in parens to make it a tuple if it's multiple args
+        input_str = """${input}"""
+        
+        # Safety: eval is risky but standard for local competitive programming runners
+        # We assume input_str is valid Python expression for arguments
+        if ',' in input_str and not input_str.strip().startswith('['):
+             args = eval(f"({input_str})")
+        else:
+             args = eval(input_str)
+
+        if isinstance(args, tuple):
+            result = method(*args)
+        else:
+            result = method(args)
+            
+        # Print result formatted as JSON/String for comparison
+        if result is None:
+            print("null")
+        elif isinstance(result, bool):
+            print("true" if result else "false")
+        else:
+            print(result)
+            
+    except Exception as e:
+        print(f"Runtime Error: {e}")
+
+if __name__ == "__main__":
+    _driver()
+    `;
   }
 
   /**
