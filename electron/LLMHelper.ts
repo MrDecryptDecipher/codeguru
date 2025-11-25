@@ -25,6 +25,7 @@ export class LLMHelper {
     3. NO BOILERPLATE: 
        - Do not include imports/headers unless necessary for the function body.
        - Do not define 'ListNode', 'TreeNode', or standard structs. Assume they exist.
+       - Do NOT define an '__init__' method in 'class Solution'. The driver uses a parameterless constructor.
     4. CLEAN OUTPUT: Return ONLY the raw code. No markdown formatting, no explanations.
 
     INPUT CONTEXT:
@@ -319,6 +320,14 @@ export class LLMHelper {
     // Removes "struct ListNode { ... };" or "public class ListNode { ... }"
     cleanCode = cleanCode.replace(/(struct|class|public class)\s+(ListNode|TreeNode)\s*\{[\s\S]*?\};?/g, '');
     cleanCode = cleanCode.replace(/\/\*\s*Definition for.*\s*\*\//g, ''); // Remove comment blocks
+
+    // --- PYTHON SPECIFIC FIXES ---
+    if (language === "python") {
+      // Fix: Remove __init__ with arguments from Solution class
+      // Replaces "def __init__(self, head):" with "def __init__(self): pass # Args removed"
+      // This prevents "missing argument" errors during instantiation.
+      cleanCode = cleanCode.replace(/def\s+__init__\s*\(\s*self\s*,\s*[^)]+\s*\)\s*:/g, 'def __init__(self): pass # Arguments removed by Ghost Fixer');
+    }
 
     // --- UNIVERSAL GHOST FIXER ---
     // We only rename if we are 100% sure we found the class wrapper
