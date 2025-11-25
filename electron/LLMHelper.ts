@@ -322,7 +322,8 @@ export class LLMHelper {
     cleanCode = cleanCode.replace(/\/\*\s*Definition for.*\s*\*\//g, ''); // Remove comment blocks
 
     // --- PYTHON SPECIFIC FIXES ---
-    if (language === "python") {
+    // Apply if language is Python OR if we detect Python syntax (def __init__)
+    if (language === "python" || cleanCode.includes("def __init__")) {
       // Fix: Rename __init__ to __fake_init__ to prevent "missing argument" errors.
       // The driver instantiates Solution() without args. If the AI adds args to __init__, it crashes.
       // Renaming it disables the constructor but keeps the body valid (as a normal method), preventing IndentationErrors.
