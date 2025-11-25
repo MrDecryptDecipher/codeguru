@@ -11,41 +11,41 @@ interface OllamaResponse {
 export class LLMHelper {
   private model: GenerativeModel | null = null
   private getSystemPrompt(osInfo: string): string {
-    return `You are an elite Competitive Programmer and LeetCode Grandmaster.
-
-    CRITICAL OBJECTIVE:
-    Generate a Python 3 solution for the given problem. 
-    You must AUTONOMOUSLY determine the correct function signature based on the problem title and description.
-
-    NAMING CONVENTIONS (The "Psychic" Heuristics):
-    1. Standard CamelCase: Convert title to camelCase (e.g., "Two Sum" -> "twoSum").
-    2. Drop Suffixes: If the title ends in "II", "III", or "2", DROP IT in the function name (e.g., "Longest Balanced Subarray II" -> "longestBalanced").
-    3. Verb-Noun Pattern: If the problem asks to "Find the maximum...", start with the noun or verb (e.g., "findMax", "longest...", "max...").
-    4. Matrix/Grid: usually "solve", "countPaths", or "maxArea".
+    return `You are an elite Polyglot Competitive Programmer (IOI/ICPC Gold Medalist).
     
-    CODING RULES:
-    1. NO STUBS REQUIRED: Design the 'class Solution:' and 'def methodName(...):' yourself.
-    2. OPTIMIZE: Use O(N) or O(N log N). Avoid O(N^2) unless N < 1000.
-    3. LOGIC HINT: For "Longest Balanced Subarray" problems involving distinct counts, consider Sliding Window or Two Pointers if N is large. Avoid complex state compression unless necessary.
-    4. ACCURACY: Double-check edge cases like empty arrays or single elements.
-    5. CLEAN OUTPUT: Return ONLY the code. No markdown, no "Here is the code".
-    6. BOILERPLATE: Do NOT define 'class ListNode' or 'class TreeNode'. Assume they exist.
-    7. OUTPUT FORMAT: JSON ONLY.
+    CORE OBJECTIVE:
+    Analyze the input to detect the target programming language (Python, C++, Java, Rust, TS, etc.).
+    Generate the MOST OPTIMAL solution (O(N) or O(N log N)) in that specific language.
+
+    UNIVERSAL CODING RULES:
+    1. LANGUAGE LOYALTY: If the input has 'vector<int>', use C++. If 'List[int]', use Python. If 'impl', use Rust.
+    2. LOGIC FIRST: 
+       - For "Hard" problems, perform a CHAIN OF THOUGHT reasoning before writing code.
+       - Verify edge cases (Empty input, Single element, Max constraints).
+    3. NO BOILERPLATE: 
+       - Do not include imports/headers unless necessary for the function body.
+       - Do not define 'ListNode', 'TreeNode', or standard structs. Assume they exist.
+    4. CLEAN OUTPUT: Return ONLY the raw code. No markdown formatting, no explanations.
 
     INPUT CONTEXT:
     OS: ${osInfo}
-    
-    OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
-    {
-      "solution": {
-        "code": "CLEAN Python code - NO COMMENTS, NO # Step explanations, EXECUTABLE code only",
-        "problem_statement": "One-line summary of the problem",
-        "context": "Algorithm used and complexity",
-        "suggested_responses": ["Key insight 1", "Key insight 2"],
-        "reasoning": "Full explanation"
-      }
-    }
     `;
+  }
+
+  /**
+   * 🌍 Polyglot Detector
+   * Analyzes the input text to determine the required programming language.
+   */
+  private detectLanguage(input: string): string {
+    if (/impl\s+Solution/.test(input) || /fn\s+main/.test(input)) return "rust";
+    if (/public\s+class\s+Solution/.test(input)) return "java";
+    if (/class\s+Solution\s*\{/.test(input) && /public:/.test(input)) return "cpp";
+    if (/func\s+.*\(.*\)\s*.*\{/.test(input)) return "go";
+    if (/var\s+.*=\s*function/.test(input) || /function\s+.*\(/.test(input)) return "javascript";
+    if (/: \w+(\[\])?\s*\{/.test(input) || /: number|: string|: boolean/.test(input)) return "typescript";
+
+    // Default to Python if ambiguous (LeetCode standard), but look for clues
+    return "python";
   }
   private useOllama: boolean = false
   private useOpenRouter: boolean = false
@@ -148,58 +148,41 @@ export class LLMHelper {
   }
 
 
-  public async generateSolution(prompt: string | any, ...args: any[]): Promise<any> {
-    try {
-      // RE-ADAPTING TO EXISTING SIGNATURE to avoid breaking callsites
-      const problemInfo = typeof prompt === 'object' ? prompt : { problem_statement: prompt };
-      const actualPrompt = problemInfo.problem_statement || JSON.stringify(problemInfo);
+  private async callLLM(systemPrompt: string, userPrompt: string): Promise<string> {
+    const fullPrompt = systemPrompt + "\n\n" + userPrompt;
 
-      // 1. ARCHITECT STEP: Determine the Function Signature Autonomously
-      const signaturePrompt = `
-      Analyze the following coding problem.
-      Output ONLY the Python function signature(def name(...):) that you would use to solve it.
-
-      NAMING CONVENTIONS (The "Psychic" Heuristics):
-      1. Standard CamelCase: Convert title to camelCase (e.g., "Two Sum" -> "twoSum").
-      2. Drop Suffixes: If the title ends in "II", "III", or "2", DROP IT in the function name (e.g., "Longest Balanced Subarray II" -> "longestBalanced").
-      3. Verb-Noun Pattern: If the problem asks to "Find the maximum...", start with the noun or verb (e.g., "findMax", "longest...", "max...").
-      4. Matrix/Grid: usually "solve", "countPaths", or "maxArea".
-
-      Rules:
-      1. Output ONLY the code line. No markdown, no explanation.
-      
-      Problem Text:
-      ${actualPrompt.substring(0, 1000)}... (truncated for efficiency)
-      `;
-
-      let detectedSignature = "";
+    if (this.useOpenRouter && this.openRouterHelper) {
       try {
-        if (this.model) {
-          const result = await this.model.generateContent(signaturePrompt);
-          detectedSignature = result.response.text();
-        } else if (this.useOpenRouter && this.openRouterHelper) {
-          // Fallback for OpenRouter
-          const result = await this.openRouterHelper.generateSolution({ problem_statement: signaturePrompt } as any);
-          detectedSignature = result.solution?.code || "";
-        }
-      } catch (e) {
-        console.log("Architect failed, falling back to 'solve'", e);
+        const result = await this.openRouterHelper.generateSolution({ problem_statement: fullPrompt } as any);
+        return JSON.stringify(result);
+      } catch (orError) {
+        console.warn("⚠️ Swarm Depleted. Engaging THE BOSS (Gemini 3 Pro)...");
+        return this.callGeminiDirect(systemPrompt, userPrompt);
       }
+    } else if (this.model) {
+      const result = await this.model.generateContent(fullPrompt);
+      return result.response.text();
+    } else if (this.useOllama) {
+      return this.callOllama(fullPrompt);
+    }
+    throw new Error("No LLM provider configured");
+  }
 
-      // Clean up the output to get just the function name
-      const nameMatch = detectedSignature.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
-      const functionName = nameMatch ? nameMatch[1] : "solve";
+  public async generateSolution(prompt: string | any, ...args: any[]): Promise<any> {
+    const problemInfo = typeof prompt === 'object' ? prompt : { problem_statement: prompt };
+    const actualPrompt = problemInfo.problem_statement || JSON.stringify(problemInfo);
 
-      console.log(`🧠 Autonomous Architect: Decided on function name '${functionName}'`);
+    // 1. DETECT LANGUAGE
+    const targetLang = this.detectLanguage(actualPrompt);
+    console.log(`🌍 Polyglot System: Detected Language -> [ ${targetLang.toUpperCase()} ]`);
 
-      // --- NEW: HINT EXTRACTION & ENFORCEMENT ---
-      // Extract hints from the raw text if they exist
-      const hints = actualPrompt.match(/Hint\s*\d+[\s\S]*?(?=Example|Constraints|$)/g);
-      let strategyInstruction = "";
+    // 2. EXTRACT HINTS
+    const hints = actualPrompt.match(/Hint\s*\d+[\s\S]*?(?=Example|Constraints|$)/g);
+    let strategyInstruction = "";
 
-      if (hints && hints.length > 0) {
-        console.log("💡 Detected Hints in Problem Text. Enforcing usage.");
-        strategyInstruction = `
+    if (hints && hints.length > 0) {
+      console.log("💡 Detected Hints in Problem Text. Enforcing usage.");
+      strategyInstruction = `
           STRATEGY ENFORCEMENT:
           The problem text contains critical HINTS. You MUST follow them.
           
@@ -221,127 +204,70 @@ export class LLMHelper {
                 - If you search starting at 'l', you will get a False Positive length of 1.
              c. Update max_len using max(max_len, r - (l + 1) + 1).
           
-          DO NOT ignore these hints. They suggest the optimal data structure (e.g., Segment Tree, Fenwick Tree).
-          Your solution MUST use the approach described in the hints.
+          USE THE HINTS provided above. They are the key to the optimal solution.
           `;
-      } else {
-        // Fallback logic guidance
-        strategyInstruction = `
+    } else {
+      // Fallback logic guidance
+      strategyInstruction = `
           LOGIC GUIDANCE:
           For "Distinct Count" subarray problems:
           - Simple prefix sums often FAIL because distinctness is not additive.
           - Consider: Segment Trees, Sliding Window (if applicable), or processing queries offline.
           - If the constraints are N <= 10^5, O(N^2) is forbidden.
           `;
-      }
+    }
 
-      // 2. GENERATION STEP: Force the Solution to use the Architect's Name
-      const constraint = `
+    // 3. ARCHITECT THE SIGNATURE (Language Aware)
+    const signaturePrompt = `
+      Analyze the problem text. Output ONLY the function signature in ${targetLang}.
+      - If Python: def name(...):
+      - If C++: int name(...)
+      - If Rust: fn name(...)
+      - If TS: function name(...)
+      
+      Heuristic: Use standard naming (camelCase or snake_case) appropriate for ${targetLang}.
+      
+      Problem Text:
+      ${actualPrompt.substring(0, 1000)}...
+      `;
+
+    const detectedSignature = await this.callLLM("Architect", signaturePrompt);
+
+    // Extract function name (Universal Regex)
+    const nameMatch = detectedSignature.match(/(?:def|fn|func|function|int|void|bool|string|long)\s+([a-zA-Z0-9_]+)/);
+    const functionName = nameMatch ? nameMatch[1] : "solve";
+
+    console.log(`🧠 Architect: Target Function Name -> '${functionName}' (${targetLang})`);
+
+    // 4. GENERATE SOLUTION
+    const constraint = `
       CRITICAL INSTRUCTION:
-      You must implement the solution using the function name '${functionName}'.
+      Write the solution in **${targetLang.toUpperCase()}**.
+      Implement the function '${functionName}'.
       
       ${strategyInstruction}
       
-      Expected Signature Start:
-      def ${functionName} (self, ...
-      
-      Do not use any other name.
+      Your code must start with the function/class definition.
       `;
 
-      console.log("[LLMHelper] Calling LLM for solution...");
+    const finalSystemPrompt = this.getSystemPrompt(process.platform);
+    const userPrompt = constraint + "\n\n" + actualPrompt;
 
-      let result;
-      let attempts = 0;
-      const maxAttempts = 2;
+    let generatedCode = await this.callLLM(finalSystemPrompt, userPrompt);
 
-      while (attempts < maxAttempts) {
-        attempts++;
+    // 5. SANITIZE (Language Aware)
+    const cleanCode = this.sanitizeCodeOutput(generatedCode, functionName, targetLang);
 
-        const fullPrompt = `${this.getSystemPrompt(process.platform)}
-
-${constraint}
-
-PROBLEM TO SOLVE:
-${JSON.stringify(problemInfo, null, 2)}
-
-REQUIREMENTS:
-1. Use the MOST OPTIMAL algorithm(prefer O(n), O(n log n), or better).
-2. REJECT O(N ^ 2) or O(N ^ 3) unless N <= 1000.
-3. Handle ALL edge cases(empty, single element, duplicates, negatives).
-4. Write COMPLETE, PRODUCTION - READY code(no placeholders, no "...").
-5. Use the EXACT method name '${functionName}'.
-
-OUTPUT FORMAT(JSON ONLY, NO MARKDOWN):
-{
-  "solution": {
-    "code": "CLEAN Python code - NO COMMENTS, NO # Step explanations, EXECUTABLE code only",
-      "problem_statement": "One-line summary of the problem",
-        "context": "Algorithm used and complexity: e.g., 'Dynamic Programming. Time: O(n*k), Space: O(n)'",
-          "suggested_responses": ["Key insight 1", "Key insight 2", "Key insight 3"],
-            "reasoning": "Full explanation: Why this approach works, algorithm steps, edge cases handled"
-  }
-}
-
-CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
-
-        if (this.useOpenRouter && this.openRouterHelper) {
-          try {
-            const constrainedInfo = { ...problemInfo, problem_statement: constraint + "\n\n" + actualPrompt };
-            result = await this.openRouterHelper.generateSolution(constrainedInfo);
-            console.log("[LLMHelper] OpenRouter returned result.");
-          } catch (orError) {
-            console.warn("⚠️ Swarm Depleted. Engaging THE BOSS (Gemini 3 Pro)...");
-            try {
-              // Fallback to Gemini Direct
-              // We split the fullPrompt to separate system instructions if possible, or just pass it all.
-              // callGeminiDirect takes (systemPrompt, userPrompt) and joins them.
-              // We'll pass the system prompt and the rest of the prompt.
-              const systemPrompt = this.getSystemPrompt(process.platform);
-              const userPart = fullPrompt.replace(systemPrompt, "").trim();
-
-              const geminiText = await this.callGeminiDirect(systemPrompt, userPart);
-              const cleanedText = this.cleanJsonResponse(geminiText);
-              result = JSON.parse(cleanedText);
-            } catch (geminiError) {
-              console.error("Gemini Fallback Failed:", geminiError);
-              throw orError; // Throw the original error if fallback also fails
-            }
-          }
-        } else if (this.model) {
-          const genResult = await this.model.generateContent(fullPrompt)
-          console.log("[LLMHelper] Gemini LLM returned result.");
-          const response = await genResult.response
-          const text = this.cleanJsonResponse(response.text())
-          result = JSON.parse(text)
-        } else {
-          throw new Error("No LLM provider configured")
-        }
-
-        // Anti-Brute-Force Check
-        if (result && result.solution) {
-          if (result.solution.code.includes("class Solution:") || result.solution.code.includes("def ")) {
-            break;
-          }
-        }
+    // Return in the expected JSON format for the UI
+    return {
+      solution: {
+        code: cleanCode,
+        problem_statement: "Solved by Polyglot Engineer",
+        context: `Language: ${targetLang}`,
+        suggested_responses: [],
+        reasoning: "Autonomous Solution"
       }
-
-      // 4. SANITIZE & RETURN
-      if (result && result.solution && result.solution.code) {
-        result.solution.code = this.sanitizeCodeOutput(result.solution.code, functionName);
-      }
-
-      // Safety Enforcer
-      if (result && result.solution && result.solution.code) {
-        result.solution.code = this.enforceRustSafety(result.solution.code);
-      }
-
-      console.log("[LLMHelper] Final processed result:", result)
-      return result
-
-    } catch (error) {
-      console.error("Error generating solution:", error)
-      throw error
-    }
+    };
   }
 
   private enforceRustSafety(code: string): string {
@@ -372,11 +298,10 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
     return code;
   }
 
-  public sanitizeCodeOutput(generatedCode: string, enforcedName: string): string {
-    // 1. Clean Markdown
+  public sanitizeCodeOutput(generatedCode: string, enforcedName: string, language: string): string {
     let cleanCode = generatedCode.replace(/```[a-z]*\n/g, '').replace(/```/g, '').trim();
 
-    // 2. JSON Unwrap
+    // JSON Unwrap
     if (cleanCode.trim().startsWith('{')) {
       try {
         const json = JSON.parse(cleanCode);
@@ -385,51 +310,61 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
       } catch (e) { }
     }
 
-    // 3. Remove Boilerplate
+    // --- UNIVERSAL BOILERPLATE STRIPPER ---
+    // Python
     cleanCode = cleanCode.replace(/class ListNode:\s+def __init__[\s\S]+?self\.next = next\s*/g, '');
     cleanCode = cleanCode.replace(/# Definition for singly-linked list\.\s*/g, '');
     cleanCode = cleanCode.replace(/class TreeNode:\s+def __init__[\s\S]+?self\.right = right\s*/g, '');
+    // C++ / Java / Rust (Generic Struct/Class removal)
+    // Removes "struct ListNode { ... };" or "public class ListNode { ... }"
+    cleanCode = cleanCode.replace(/(struct|class|public class)\s+(ListNode|TreeNode)\s*\{[\s\S]*?\};?/g, '');
+    cleanCode = cleanCode.replace(/\/\*\s*Definition for.*\s*\*\//g, ''); // Remove comment blocks
 
-    // 4. SAFE GHOST FIXER
-    // Check if the name already exists anywhere in the code
-    // If the Architect worked (which logs show it did), we don't need to do risky string manipulation.
-    const simpleExistsRegex = new RegExp(`def\\s+${enforcedName}\\s*\\(`);
-    if (simpleExistsRegex.test(cleanCode)) {
-      console.log(`👻 Ghost Fixer: Function '${enforcedName}' found. Code is healthy.`);
-      return cleanCode; // RETURN EARLY - Preserves indentation perfectly
-    }
+    // --- UNIVERSAL GHOST FIXER ---
+    // We only rename if we are 100% sure we found the class wrapper
 
-    // 5. NUCLEAR FIX (Only runs if function name is WRONG)
-    // Use a Capture Group split to preserve whitespace/newlines
-    const parts = cleanCode.split(/(class\s+Solution:)/);
-
-    if (parts.length >= 3) {
-      const preSolution = parts[0];
-      const declaration = parts[1]; // "class Solution:"
-      let solutionBody = parts.slice(2).join(""); // The rest, INCLUDING indentation
-
-      console.log(`👻 Ghost Fixer: Target '${enforcedName}' missing. Hunting for candidate...`);
-
-      // Find the first method in the body
-      const methodMatch = solutionBody.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
-
-      if (methodMatch) {
-        const candidate = methodMatch[1];
-        const reserved = ["__init__", "push", "pull", "update", "query", "build"];
-
-        if (!reserved.includes(candidate) && candidate !== enforcedName) {
-          console.log(`   REPLACING '${candidate}' -> '${enforcedName}'`);
-          // Replace the specific function definition
-          solutionBody = solutionBody.replace(
-            new RegExp(`def\\s+${candidate}\\s*\\(`, 'g'),
-            `def ${enforcedName}(`
-          );
-        }
+    if (language === "python") {
+      // Check if the name already exists anywhere in the code
+      const simpleExistsRegex = new RegExp(`def\\s+${enforcedName}\\s*\\(`);
+      if (simpleExistsRegex.test(cleanCode)) {
+        console.log(`👻 Ghost Fixer: Function '${enforcedName}' found. Code is healthy.`);
+        return cleanCode; // RETURN EARLY
       }
 
-      // Reassemble safely
-      return preSolution + declaration + solutionBody;
+      // NUCLEAR FIX (Only runs if function name is WRONG)
+      const parts = cleanCode.split(/(class\s+Solution:)/);
+
+      if (parts.length >= 3) {
+        const preSolution = parts[0];
+        const declaration = parts[1]; // "class Solution:"
+        let solutionBody = parts.slice(2).join(""); // The rest, INCLUDING indentation
+
+        console.log(`👻 Ghost Fixer: Target '${enforcedName}' missing. Hunting for candidate...`);
+
+        // Find the first method in the body
+        const methodMatch = solutionBody.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+
+        if (methodMatch) {
+          const candidate = methodMatch[1];
+          const reserved = ["__init__", "push", "pull", "update", "query", "build"];
+
+          if (!reserved.includes(candidate) && candidate !== enforcedName) {
+            console.log(`   REPLACING '${candidate}' -> '${enforcedName}'`);
+            // Replace the specific function definition
+            solutionBody = solutionBody.replace(
+              new RegExp(`def\\s+${candidate}\\s*\\(`, 'g'),
+              `def ${enforcedName}(`
+            );
+          }
+        }
+
+        // Reassemble safely
+        return preSolution + declaration + solutionBody;
+      }
     }
+    // For C++/Java/Rust, we usually trust the Architect more because 
+    // parsing C-style syntax with Regex is dangerous. 
+    // We rely on the "CRITICAL INSTRUCTION" in the prompt to enforce the name.
 
     return cleanCode;
   }
