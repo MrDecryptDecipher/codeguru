@@ -363,9 +363,10 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
   }
 
   public sanitizeCodeOutput(generatedCode: string, enforcedName: string): string {
+    // 1. Clean Markdown
     let cleanCode = generatedCode.replace(/```[a-z]*\n/g, '').replace(/```/g, '').trim();
 
-    // JSON Unwrap
+    // 2. JSON Unwrap
     if (cleanCode.trim().startsWith('{')) {
       try {
         const json = JSON.parse(cleanCode);
@@ -374,45 +375,50 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
       } catch (e) { }
     }
 
-    // Boilerplate Stripping
+    // 3. Remove Boilerplate
     cleanCode = cleanCode.replace(/class ListNode:\s+def __init__[\s\S]+?self\.next = next\s*/g, '');
     cleanCode = cleanCode.replace(/# Definition for singly-linked list\.\s*/g, '');
     cleanCode = cleanCode.replace(/class TreeNode:\s+def __init__[\s\S]+?self\.right = right\s*/g, '');
 
-    // --- NUCLEAR GHOST FIXER (Strict Scope) ---
-    // 1. Find the 'class Solution' block.
-    // We capture everything after 'class Solution:' to ensure we don't touch helper classes above it.
-    const solutionSplit = cleanCode.split(/class\s+Solution:\s*/);
+    // 4. SAFE GHOST FIXER
+    // Check if the name already exists anywhere in the code
+    // If the Architect worked (which logs show it did), we don't need to do risky string manipulation.
+    const simpleExistsRegex = new RegExp(`def\\s+${enforcedName}\\s*\\(`);
+    if (simpleExistsRegex.test(cleanCode)) {
+      console.log(`👻 Ghost Fixer: Function '${enforcedName}' found. Code is healthy.`);
+      return cleanCode; // RETURN EARLY - Preserves indentation perfectly
+    }
 
-    if (solutionSplit.length > 1) {
-      const preSolution = solutionSplit[0]; // Helper classes (SegmentTree, etc)
-      let solutionBody = solutionSplit[1]; // The Solution class content
+    // 5. NUCLEAR FIX (Only runs if function name is WRONG)
+    // Use a Capture Group split to preserve whitespace/newlines
+    const parts = cleanCode.split(/(class\s+Solution:)/);
 
-      // 2. Check if enforced name exists in the Solution body
-      const existsRegex = new RegExp(`def\\s+${enforcedName}\\s*\\(`);
+    if (parts.length >= 3) {
+      const preSolution = parts[0];
+      const declaration = parts[1]; // "class Solution:"
+      let solutionBody = parts.slice(2).join(""); // The rest, INCLUDING indentation
 
-      if (!existsRegex.test(solutionBody)) {
-        console.log(`👻 Ghost Fixer: Target '${enforcedName}' missing in Solution. Fixing...`);
+      console.log(`👻 Ghost Fixer: Target '${enforcedName}' missing. Hunting for candidate...`);
 
-        // 3. Find the method that looks like the main entry point (ignoring __init__)
-        // We look for the first method definition in the Solution body.
-        const methodMatch = solutionBody.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+      // Find the first method in the body
+      const methodMatch = solutionBody.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
 
-        if (methodMatch) {
-          const wrongName = methodMatch[1];
-          // BLOCKLIST: Never rename these
-          if (wrongName !== "__init__" && wrongName !== "push" && wrongName !== "update") {
-            console.log(`   REPLACING '${wrongName}' -> '${enforcedName}'`);
-            // Only replace the definition inside solutionBody
-            solutionBody = solutionBody.replace(
-              new RegExp(`def\\s+${wrongName}\\s*\\(`, 'g'),
-              `def ${enforcedName}(`
-            );
-          }
+      if (methodMatch) {
+        const candidate = methodMatch[1];
+        const reserved = ["__init__", "push", "pull", "update", "query", "build"];
+
+        if (!reserved.includes(candidate) && candidate !== enforcedName) {
+          console.log(`   REPLACING '${candidate}' -> '${enforcedName}'`);
+          // Replace the specific function definition
+          solutionBody = solutionBody.replace(
+            new RegExp(`def\\s+${candidate}\\s*\\(`, 'g'),
+            `def ${enforcedName}(`
+          );
         }
       }
-      // Reassemble the code
-      return preSolution + "class Solution:\n" + solutionBody;
+
+      // Reassemble safely
+      return preSolution + declaration + solutionBody;
     }
 
     return cleanCode;
