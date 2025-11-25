@@ -206,6 +206,11 @@ export class LLMHelper {
           Found Hints:
           ${hints.join('\n')}
           
+          CRITICAL ALGORITHMIC WARNING:
+          If using a Segment Tree to find an index 'r' where a condition is met (e.g., sum == 0):
+          1. DO NOT use Binary Search over a boolean range query (e.g., "does range [l, mid] contain 0?"). This logic is FLAWED because it finds the largest range containing the target, not the target index itself.
+          2. INSTEAD, implement a recursive 'find_rightmost_index' method in the Segment Tree that descends the nodes to find the specific index directly in O(log N).
+          
           DO NOT ignore these hints. They suggest the optimal data structure (e.g., Segment Tree, Fenwick Tree).
           Your solution MUST use the approach described in the hints.
           `;
@@ -358,58 +363,56 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
   }
 
   public sanitizeCodeOutput(generatedCode: string, enforcedName: string): string {
-    // 1. Clean Markdown
     let cleanCode = generatedCode.replace(/```[a-z]*\n/g, '').replace(/```/g, '').trim();
 
-    // 2. JSON Unwrap (Fixing the "UI generated full stuff" issue)
-    // Sometimes models wrap code in {"solution": {"code": "..."}}
+    // JSON Unwrap
     if (cleanCode.trim().startsWith('{')) {
       try {
         const json = JSON.parse(cleanCode);
-        if (json.solution && json.solution.code) {
-          cleanCode = json.solution.code;
-        } else if (json.code) {
-          cleanCode = json.code;
-        }
-      } catch (e) {
-        // Not valid JSON, treat as raw code
-      }
+        if (json.solution && json.solution.code) cleanCode = json.solution.code;
+        else if (json.code) cleanCode = json.code;
+      } catch (e) { }
     }
 
-    // 3. REMOVE BOILERPLATE
+    // Boilerplate Stripping
     cleanCode = cleanCode.replace(/class ListNode:\s+def __init__[\s\S]+?self\.next = next\s*/g, '');
     cleanCode = cleanCode.replace(/# Definition for singly-linked list\.\s*/g, '');
     cleanCode = cleanCode.replace(/class TreeNode:\s+def __init__[\s\S]+?self\.right = right\s*/g, '');
 
-    // 4. SMART GHOST FIXER
-    // First, check if the enforced name ALREADY exists.
-    const existsRegex = new RegExp(`def\\s+${enforcedName}\\s*\\(`);
-    if (existsRegex.test(cleanCode)) {
-      console.log(`👻 Ghost Fixer: Function '${enforcedName}' found. No renaming needed.`);
-      return cleanCode;
-    }
+    // --- NUCLEAR GHOST FIXER (Strict Scope) ---
+    // 1. Find the 'class Solution' block.
+    // We capture everything after 'class Solution:' to ensure we don't touch helper classes above it.
+    const solutionSplit = cleanCode.split(/class\s+Solution:\s*/);
 
-    // If missing, ONLY rename the main function inside 'class Solution'
-    console.log(`👻 Ghost Fixer: Function '${enforcedName}' missing. Hunting for candidate...`);
+    if (solutionSplit.length > 1) {
+      const preSolution = solutionSplit[0]; // Helper classes (SegmentTree, etc)
+      let solutionBody = solutionSplit[1]; // The Solution class content
 
-    const solutionMatch = cleanCode.match(/class\s+Solution:\s*([\s\S]*)/);
-    if (solutionMatch) {
-      // Look for the first method in Solution that isn't __init__
-      const classBody = solutionMatch[1];
-      const methodMatch = classBody.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+      // 2. Check if enforced name exists in the Solution body
+      const existsRegex = new RegExp(`def\\s+${enforcedName}\\s*\\(`);
 
-      if (methodMatch) {
-        const candidate = methodMatch[1];
-        // SAFEGUARD: Do not rename __init__ or standard helpers
-        const reserved = ["__init__", "push", "pull", "update", "query", "build"];
+      if (!existsRegex.test(solutionBody)) {
+        console.log(`👻 Ghost Fixer: Target '${enforcedName}' missing in Solution. Fixing...`);
 
-        if (!reserved.includes(candidate) && candidate !== enforcedName) {
-          console.log(`👻 Ghost Fixer: Renaming '${candidate}' -> '${enforcedName}'`);
-          // Replace ONLY this specific function name
-          const specificRegex = new RegExp(`def\\s+${candidate}\\s*\\(`, 'g');
-          cleanCode = cleanCode.replace(specificRegex, `def ${enforcedName}(`);
+        // 3. Find the method that looks like the main entry point (ignoring __init__)
+        // We look for the first method definition in the Solution body.
+        const methodMatch = solutionBody.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+
+        if (methodMatch) {
+          const wrongName = methodMatch[1];
+          // BLOCKLIST: Never rename these
+          if (wrongName !== "__init__" && wrongName !== "push" && wrongName !== "update") {
+            console.log(`   REPLACING '${wrongName}' -> '${enforcedName}'`);
+            // Only replace the definition inside solutionBody
+            solutionBody = solutionBody.replace(
+              new RegExp(`def\\s+${wrongName}\\s*\\(`, 'g'),
+              `def ${enforcedName}(`
+            );
+          }
         }
       }
+      // Reassemble the code
+      return preSolution + "class Solution:\n" + solutionBody;
     }
 
     return cleanCode;
