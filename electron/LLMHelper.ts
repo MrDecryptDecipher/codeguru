@@ -192,10 +192,40 @@ export class LLMHelper {
 
       console.log(`🧠 Autonomous Architect: Decided on function name '${functionName}'`);
 
+      // --- NEW: HINT EXTRACTION & ENFORCEMENT ---
+      // Extract hints from the raw text if they exist
+      const hints = actualPrompt.match(/Hint\s*\d+[\s\S]*?(?=Example|Constraints|$)/g);
+      let strategyInstruction = "";
+
+      if (hints && hints.length > 0) {
+        console.log("💡 Detected Hints in Problem Text. Enforcing usage.");
+        strategyInstruction = `
+          STRATEGY ENFORCEMENT:
+          The problem text contains critical HINTS. You MUST follow them.
+          
+          Found Hints:
+          ${hints.join('\n')}
+          
+          DO NOT ignore these hints. They suggest the optimal data structure (e.g., Segment Tree, Fenwick Tree).
+          Your solution MUST use the approach described in the hints.
+          `;
+      } else {
+        // Fallback logic guidance
+        strategyInstruction = `
+          LOGIC GUIDANCE:
+          For "Distinct Count" subarray problems:
+          - Simple prefix sums often FAIL because distinctness is not additive.
+          - Consider: Segment Trees, Sliding Window (if applicable), or processing queries offline.
+          - If the constraints are N <= 10^5, O(N^2) is forbidden.
+          `;
+      }
+
       // 2. GENERATION STEP: Force the Solution to use the Architect's Name
       const constraint = `
       CRITICAL INSTRUCTION:
       You must implement the solution using the function name '${functionName}'.
+      
+      ${strategyInstruction}
       
       Expected Signature Start:
       def ${functionName} (self, ...
