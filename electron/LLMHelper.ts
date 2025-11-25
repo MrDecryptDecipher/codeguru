@@ -211,17 +211,15 @@ export class LLMHelper {
           1. DO NOT use Binary Search over a boolean range query (e.g., "does range [l, mid] contain 0?"). This logic is FLAWED because it finds the largest range containing the target, not the target index itself.
           2. INSTEAD, implement a recursive 'find_rightmost_index' method in the Segment Tree that descends the nodes to find the specific index directly in O(log N).
 
-          CRITICAL LOGIC PATCH (READ CAREFULLY):
-          Hint 5 describes the 'Slide' transition.
-          However, you must NOT skip the solution starting at index 0.
-          
-          CORRECT LOOP STRUCTURE:
-          1. Initialize Segment Tree with all first occurrences.
+          CRITICAL LOGIC PATCH - READ CAREFULLY:
+          1. Initialize Segment Tree with first occurrences.
           2. QUERY FIRST: Check for valid subarrays starting at index 0 (before the loop).
-          3. THEN LOOP 'l' from 0 to n-1:
-             a. "Slide": Remove contribution of nums[l] (Hint 5 update).
-             b. "Query": Check for valid subarrays starting at index l+1.
-             c. Update max_len using the correct starting position.
+          3. Loop 'l' from 0 to n-1 (where 'l' is the index being REMOVED):
+             a. Update Segment Tree to remove contribution of nums[l].
+             b. QUERY CORRECTLY: Search for zero in range [l + 1, n - 1].
+                - DO NOT search starting at 'l'. The value at 'l' will be 0 but it represents an empty prefix relative to the new window.
+                - If you search starting at 'l', you will get a False Positive length of 1.
+             c. Update max_len using max(max_len, r - (l + 1) + 1).
           
           DO NOT ignore these hints. They suggest the optimal data structure (e.g., Segment Tree, Fenwick Tree).
           Your solution MUST use the approach described in the hints.
