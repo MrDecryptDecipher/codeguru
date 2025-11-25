@@ -190,73 +190,59 @@ export class CodeExecutor {
     return simpleMatch ? simpleMatch[1] : "solve";
   }
 
-  private generatePythonDriver(userSolution: string, input: string): string {
-    const funcName = this.extractFunctionName(userSolution);
+  private generatePythonDriver(solutionCode: string, testInputs: string): string {
+    // 1. EXTRACT THE FUNCTION NAME FROM THE GENERATED SOLUTION
+    // We don't care what the "correct" name is. We use whatever the AI wrote.
+    const nameMatch = solutionCode.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+    const actualFunctionName = nameMatch ? nameMatch[1] : "solve";
 
-    // Robust driver that handles imports and calling the method
+    console.log(`🚗 Dynamic Driver: Syncing with function '${actualFunctionName}'`);
+
+    // 2. GENERATE THE DRIVER USING 'getattr'
+    // This allows calling the function by string name, preventing AttributeError.
     return `
 import sys
-import json
-from typing import *
 import collections
+from typing import *
 import math
-import itertools
-import functools
-import heapq
-import bisect
 
-# Common LeetCode imports
-List = List
-Optional = Optional
-
-# Mock ListNode/TreeNode if not present to prevent errors
-if 'ListNode' not in locals():
-    class ListNode:
-        def __init__(self, val=0, next=None):
-            self.val = val
-            self.next = next
-
-if 'TreeNode' not in locals():
-    class TreeNode:
-        def __init__(self, val=0, left=None, right=None):
-            self.val = val
-            self.left = left
-            self.right = right
-
-${userSolution}
+# --- USER SOLUTION ---
+${solutionCode}
+# ---------------------
 
 def _driver():
     try:
+        # Load inputs
+        # We assume testInputs is a valid Python literal (e.g., "[1, 2], 3")
+        # If it's a string that needs parsing, we might need eval or json.loads
+        # But based on the user's request, we inject it directly.
+        inputs = ${testInputs} 
+        
+        # Instantiate Solution
         sol = Solution()
-        # DYNAMICALLY CALL THE FUNCTION
-        # We use getattr to call the method by string name!
-        method = getattr(sol, "${funcName}") 
         
-        # Input handling: Try to evaluate the input string as Python literal
-        # This handles cases like "[1,2,3], 4" or "1, 2"
-        # We wrap it in parens to make it a tuple if it's multiple args
-        input_str = """${input}"""
+        # --- DYNAMIC AUTONOMOUS CALL ---
+        # This is the magic. It looks up the function name dynamically.
+        method_name = "${actualFunctionName}"
         
-        # Safety: eval is risky but standard for local competitive programming runners
-        # We assume input_str is valid Python expression for arguments
-        if ',' in input_str and not input_str.strip().startswith('['):
-             args = eval(f"({input_str})")
-        else:
-             args = eval(input_str)
+        if not hasattr(sol, method_name):
+            print(f"Error: Solution class has no method '{method_name}'")
+            return
 
-        if isinstance(args, tuple):
-            result = method(*args)
-        else:
-            result = method(args)
-            
-        # Print result formatted as JSON/String for comparison
+        method = getattr(sol, method_name)
+        
+        # Execute
+        # If inputs is a tuple, unpack it. If it's a single value, pass it directly.
+        result = method(*inputs) if isinstance(inputs, tuple) else method(inputs)
+        
+        # Print result formatted for comparison (JSON-like)
         if result is None:
             print("null")
         elif isinstance(result, bool):
             print("true" if result else "false")
         else:
             print(result)
-            
+        
     except Exception as e:
         print(f"Runtime Error: {e}")
 
