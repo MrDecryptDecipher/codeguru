@@ -210,6 +210,18 @@ export class LLMHelper {
           If using a Segment Tree to find an index 'r' where a condition is met (e.g., sum == 0):
           1. DO NOT use Binary Search over a boolean range query (e.g., "does range [l, mid] contain 0?"). This logic is FLAWED because it finds the largest range containing the target, not the target index itself.
           2. INSTEAD, implement a recursive 'find_rightmost_index' method in the Segment Tree that descends the nodes to find the specific index directly in O(log N).
+
+          CRITICAL LOGIC PATCH (READ CAREFULLY):
+          Hint 5 describes the 'Slide' transition.
+          However, you must NOT skip the solution starting at index 0.
+          
+          CORRECT LOOP STRUCTURE:
+          1. Initialize Segment Tree with all first occurrences.
+          2. QUERY FIRST: Check for valid subarrays starting at index 0 (before the loop).
+          3. THEN LOOP 'l' from 0 to n-1:
+             a. "Slide": Remove contribution of nums[l] (Hint 5 update).
+             b. "Query": Check for valid subarrays starting at index l+1.
+             c. Update max_len using the correct starting position.
           
           DO NOT ignore these hints. They suggest the optimal data structure (e.g., Segment Tree, Fenwick Tree).
           Your solution MUST use the approach described in the hints.
