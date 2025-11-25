@@ -116,137 +116,63 @@ export class LLMHelper {
     return match ? match[1] : null;
   }
 
-  public async generateSolution(prompt: string, ...args: any[]): Promise<any> {
-    // 1. ARCHITECT STEP: Determine the Function Signature Autonomously
-    // We ask the AI: "Based on this text, what should the Python function signature be?"
-    // This works for New, Tweaked, and Standard problems alike.
-    const signaturePrompt = `
-    Analyze the following coding problem.
-    Output ONLY the Python function signature(def name(...):) that you would use to solve it.
-
-  Rules:
-1. Use standard naming(camelCase).
-    2. If the problem implies a specific name(like 'longestBalanced'), use it.
-    3. If it's a new problem, invent a descriptive name.
-4. Output ONLY the code line.No markdown, no explanation.
-    
-    Problem Text:
-    ${prompt.substring(0, 1000)}... (truncated for efficiency)
-  `;
-
-    // Call a fast model (or the same model) to get the signature
-    // Note: We reuse the main callLLM helper but with a specific instruction
-    // We need to construct a temporary problemInfo for the Architect call
-    const architectInfo = {
-      problem_statement: signaturePrompt,
-      // Minimal context to satisfy the helper
-    };
-
-    // We can't easily call 'callLLM' directly because it's not exposed as a public method in the snippet provided.
-    // However, we can use the existing 'model.generateContent' directly if available, or wrap it.
-    // For simplicity, we'll assume we can use the existing infrastructure by creating a "Signature Task".
-
-    let detectedSignature = "";
+  public async generateSolution(prompt: string | any, ...args: any[]): Promise<any> {
     try {
-      if (this.model) {
-        const result = await this.model.generateContent(signaturePrompt);
-        detectedSignature = result.response.text();
-      } else if (this.useOpenRouter && this.openRouterHelper) {
-        // Fallback for OpenRouter (simplified)
-        // In a real implementation, we'd use the helper properly.
-        // For now, let's assume we can skip the Architect step if using OpenRouter and rely on the main prompt,
-        // OR we can try to use the helper.
-        // Let's try to use the helper with a dummy object.
-        const result = await this.openRouterHelper.generateSolution({ problem_statement: signaturePrompt } as any);
-        detectedSignature = result.solution?.code || ""; // Expecting code output
+      // RE-ADAPTING TO EXISTING SIGNATURE to avoid breaking callsites
+      const problemInfo = typeof prompt === 'object' ? prompt : { problem_statement: prompt };
+      const actualPrompt = problemInfo.problem_statement || JSON.stringify(problemInfo);
+
+      // 1. ARCHITECT STEP: Determine the Function Signature Autonomously
+      const signaturePrompt = `
+      Analyze the following coding problem.
+      Output ONLY the Python function signature(def name(...):) that you would use to solve it.
+
+      NAMING CONVENTIONS (The "Psychic" Heuristics):
+      1. Standard CamelCase: Convert title to camelCase (e.g., "Two Sum" -> "twoSum").
+      2. Drop Suffixes: If the title ends in "II", "III", or "2", DROP IT in the function name (e.g., "Longest Balanced Subarray II" -> "longestBalanced").
+      3. Verb-Noun Pattern: If the problem asks to "Find the maximum...", start with the noun or verb (e.g., "findMax", "longest...", "max...").
+      4. Matrix/Grid: usually "solve", "countPaths", or "maxArea".
+
+      Rules:
+      1. Output ONLY the code line. No markdown, no explanation.
+      
+      Problem Text:
+      ${actualPrompt.substring(0, 1000)}... (truncated for efficiency)
+      `;
+
+      let detectedSignature = "";
+      try {
+        if (this.model) {
+          const result = await this.model.generateContent(signaturePrompt);
+          detectedSignature = result.response.text();
+        } else if (this.useOpenRouter && this.openRouterHelper) {
+          // Fallback for OpenRouter
+          const result = await this.openRouterHelper.generateSolution({ problem_statement: signaturePrompt } as any);
+          detectedSignature = result.solution?.code || "";
+        }
+      } catch (e) {
+        console.log("Architect failed, falling back to 'solve'", e);
       }
-    } catch (e) {
-      console.log("Architect failed, falling back to 'solve'", e);
-    }
 
+      // Clean up the output to get just the function name
+      const nameMatch = detectedSignature.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
+      const functionName = nameMatch ? nameMatch[1] : "solve";
 
-    // Clean up the output to get just the function name
-    // e.g., "def longestBalanced(self, nums: List[int]) -> int:" -> "longestBalanced"
-    const nameMatch = detectedSignature.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
-    const functionName = nameMatch ? nameMatch[1] : "solve"; // Fallback to 'solve' if parsing fails
+      console.log(`🧠 Autonomous Architect: Decided on function name '${functionName}'`);
 
-    console.log(`🧠 Autonomous Architect: Decided on function name '${functionName}'`);
+      // 2. GENERATION STEP: Force the Solution to use the Architect's Name
+      const constraint = `
+      CRITICAL INSTRUCTION:
+      You must implement the solution using the function name '${functionName}'.
+      
+      Expected Signature Start:
+      def ${functionName} (self, ...
+      
+      Do not use any other name.
+      `;
 
-    // 2. GENERATION STEP: Force the Solution to use the Architect's Name
-    const constraint = `
-    CRITICAL INSTRUCTION:
-    You must implement the solution using the function name '${functionName}'.
-    
-    Expected Signature Start:
-    def ${functionName} (self, ...
-    
-    Do not use any other name.
-    `;
+      console.log("[LLMHelper] Calling LLM for solution...");
 
-    const finalSystemPrompt = this.getSystemPrompt(process.platform);
-    const userPrompt = constraint + "\n\n" + prompt;
-
-    // 3. CALL LLM (Main Generation)
-    // We reconstruct the problemInfo to include the constraint in the prompt
-    // The original 'prompt' argument seems to be 'problemInfo' in previous code, but the user request says 'prompt: string'.
-    // Let's check the signature. The previous signature was 'generateSolution(problemInfo: any)'.
-    // The user request changed it to 'generateSolution(prompt: string, ...args: any[])'.
-    // I need to adapt to the existing signature 'generateSolution(problemInfo: any)' but implement the logic.
-
-    // RE-ADAPTING TO EXISTING SIGNATURE to avoid breaking callsites
-    const problemInfo = typeof prompt === 'object' ? prompt : { problem_statement: prompt };
-    const actualPrompt = problemInfo.problem_statement || JSON.stringify(problemInfo);
-
-    // ... (Architect logic using actualPrompt) ...
-    // Let's re-run the Architect logic with 'actualPrompt'
-
-    // (Repeating Architect Logic for clarity in the replacement block)
-    const archPrompt = `
-    Analyze the following coding problem.
-    Output ONLY the Python function signature(def name(...):) that you would use to solve it.
-
-  Rules:
-1. Use standard naming(camelCase).
-    2. If the problem implies a specific name(like 'longestBalanced'), use it.
-    3. If it's a new problem, invent a descriptive name.
-4. Output ONLY the code line.No markdown, no explanation.
-    
-    Problem Text:
-    ${actualPrompt.substring(0, 1000)}...
-`;
-
-    let archSignature = "";
-    try {
-      if (this.model) {
-        const result = await this.model.generateContent(archPrompt);
-        archSignature = result.response.text();
-      } else if (this.useOpenRouter && this.openRouterHelper) {
-        const result = await this.openRouterHelper.generateSolution({ problem_statement: archPrompt } as any);
-        archSignature = result.solution?.code || "";
-      }
-    } catch (e) {
-      console.log("Architect failed", e);
-    }
-
-    const archNameMatch = archSignature.match(/def\s+([a-zA-Z0-9_]+)\s*\(/);
-    const archFunctionName = archNameMatch ? archNameMatch[1] : "solve";
-    console.log(`🧠 Autonomous Architect: Decided on function name '${archFunctionName}'`);
-
-    const archConstraint = `
-    CRITICAL INSTRUCTION:
-    You must implement the solution using the function name '${archFunctionName}'.
-    
-    Expected Signature Start:
-    def ${archFunctionName} (self, ...
-    
-    Do not use any other name.
-    `;
-
-    // Now call the main generation loop
-    // We'll reuse the existing loop structure but inject the constraint
-
-    console.log("[LLMHelper] Calling LLM for solution...");
-    try {
       let result;
       let attempts = 0;
       const maxAttempts = 2;
@@ -256,7 +182,7 @@ export class LLMHelper {
 
         const fullPrompt = `${this.getSystemPrompt(process.platform)}
 
-${archConstraint}
+${constraint}
 
 PROBLEM TO SOLVE:
 ${JSON.stringify(problemInfo, null, 2)}
@@ -266,7 +192,7 @@ REQUIREMENTS:
 2. REJECT O(N ^ 2) or O(N ^ 3) unless N <= 1000.
 3. Handle ALL edge cases(empty, single element, duplicates, negatives).
 4. Write COMPLETE, PRODUCTION - READY code(no placeholders, no "...").
-5. Use the EXACT method name '${archFunctionName}'.
+5. Use the EXACT method name '${functionName}'.
 
 OUTPUT FORMAT(JSON ONLY, NO MARKDOWN):
 {
@@ -283,14 +209,10 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
 
         if (this.useOpenRouter && this.openRouterHelper) {
           try {
-            // We need to pass the constraint in a way OpenRouterHelper understands, or just rely on the prompt if it uses it.
-            // Assuming OpenRouterHelper takes 'enhancedInfo' and builds prompt.
-            // We'll modify problemInfo to include the constraint in the description or a special field.
-            const constrainedInfo = { ...problemInfo, problem_statement: archConstraint + "\n\n" + actualPrompt };
+            const constrainedInfo = { ...problemInfo, problem_statement: constraint + "\n\n" + actualPrompt };
             result = await this.openRouterHelper.generateSolution(constrainedInfo);
             console.log("[LLMHelper] OpenRouter returned result.");
           } catch (orError) {
-            // ... fallback logic ...
             throw orError;
           }
         } else if (this.model) {
@@ -303,16 +225,17 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
           throw new Error("No LLM provider configured")
         }
 
-        // ... Anti-Brute-Force Check (keep existing) ...
+        // Anti-Brute-Force Check
         if (result && result.solution) {
-          // ... (same logic) ...
-          break; // Break if successful
+          if (result.solution.code.includes("class Solution:") || result.solution.code.includes("def ")) {
+            break;
+          }
         }
       }
 
       // 4. SANITIZE & RETURN
       if (result && result.solution && result.solution.code) {
-        result.solution.code = this.sanitizeCodeOutput(result.solution.code, archFunctionName);
+        result.solution.code = this.sanitizeCodeOutput(result.solution.code, functionName);
       }
 
       // Safety Enforcer
@@ -358,7 +281,7 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
   }
 
   public sanitizeCodeOutput(generatedCode: string, enforcedName: string): string {
-    let cleanCode = generatedCode.replace(/```[a - z] *\n / g, '').replace(/```/g, '').trim();
+    let cleanCode = generatedCode.replace(/```[a-z]*\n/g, '').replace(/```/g, '').trim();
 
     // REMOVE BOILERPLATE
     cleanCode = cleanCode.replace(/class ListNode:\s+def __init__[\s\S]+?self\.next = next\s*/g, '');
