@@ -196,7 +196,49 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
 
   // ... (existing methods) ...
 
+  /**
+   * UNIVERSAL STUB EXTRACTOR
+   * Scans the raw user input for anything looking like a Python class definition.
+   * This works for Easy, Medium, and Hard problems.
+   */
+  private extractStubFromInput(input: string): string | null {
+    // Regex explanation:
+    // Look for 'class Solution:' 
+    // Followed by any amount of whitespace/newlines 
+    // Followed by 'def' and a function name
+    // Capture the function definition line.
+    const stubRegex = /(class\s+Solution:\s*[\s\S]*?def\s+[a-zA-Z0-9_]+\s*\(.*?\).*?:)/;
+
+    const match = input.match(stubRegex);
+    return match ? match[1] : null;
+  }
+
   public async generateSolution(problemInfo: any): Promise<any> {
+    // 1. EXTRACT THE STUB (The Source of Truth)
+    // We use the raw problem statement or code stub as the source
+    const rawInput = problemInfo.code_stub || problemInfo.problem_statement || "";
+    const exactStub = this.extractStubFromInput(rawInput);
+
+    let stubInstruction = "";
+
+    // 2. INJECT THE STUB CONSTRAINT
+    if (exactStub) {
+      console.log("🔒 Universal Stub Enforcer: Found Stub!", exactStub);
+
+      // We prepend a "Hypnotic Instruction" to force the AI to obey the stub
+      stubInstruction = `
+        CRITICAL: YOU MUST USE THIS EXACT CODE SKELETON. DO NOT CHANGE THE FUNCTION NAME.
+        
+        ${exactStub}
+        
+        Implement the solution inside this class.
+        `;
+    } else {
+      console.warn("⚠️ Universal Stub Enforcer: No Stub found in input. AI will guess function name.");
+      // Fallback instruction
+      stubInstruction = "IMPORTANT: Use standard LeetCode function naming conventions (camelCase). Example: 'longestBalanced' instead of 'longestBalancedSubarray'.";
+    }
+
     // STEP 1: Extract expected method name from CODE STUB (not description!)
     // This must happen BEFORE any async branching
     let expectedMethodName: string | undefined;
@@ -273,7 +315,10 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
         attempts++;
 
         // GENERATE PROMPT INSIDE LOOP (so hints/penalties are included)
+        // GENERATE PROMPT INSIDE LOOP (so hints/penalties are included)
         const prompt = `${this.systemPrompt}
+
+${stubInstruction}
 
 PROBLEM TO SOLVE:
 ${JSON.stringify(enhancedInfo, null, 2)}
@@ -426,6 +471,33 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
     cleanCode = cleanCode.replace(/\n{3,}/g, '\n\n');
 
     // 2. Extract Required Name from Stub
+    // Re-Run Extraction to get the Truth
+    const stubMatch = this.extractStubFromInput(userStub);
+
+    if (stubMatch) {
+      // Extract strictly the function name: 'def longestBalanced('
+      const nameRegex = /def\s+([a-zA-Z0-9_]+)\s*\(/;
+      const match = stubMatch.match(nameRegex);
+
+      if (match) {
+        const expectedName = match[1]; // e.g., "longestBalanced"
+        console.log(`👻 Ghost Fixer: Enforcing '${expectedName}'`);
+
+        // Find what the AI actually wrote (e.g., "longestBalancedSubarray")
+        const aiFuncRegex = /def\s+([a-zA-Z0-9_]+)\s*\(/g;
+        cleanCode = cleanCode.replace(aiFuncRegex, (fullMatch, aiName) => {
+          if (aiName !== expectedName) {
+            console.log(`   ⚡ REPLACING '${aiName}' -> '${expectedName}'`);
+            return `def ${expectedName}(`;
+          }
+          return fullMatch;
+        });
+
+        return cleanCode;
+      }
+    }
+
+    // Fallback to old logic if Universal Extractor fails (e.g. non-Python)
     // Matches: def name( or fn name( or int name( or public ReturnType name(
     const requiredPattern = /(?:def|fn|int|void|long|double|float|bool|string|char|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
     const reqMatch = userStub.match(requiredPattern);
