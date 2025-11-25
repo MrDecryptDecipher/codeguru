@@ -26,9 +26,11 @@ export class LLMHelper {
     CODING RULES:
     1. NO STUBS REQUIRED: Design the 'class Solution:' and 'def methodName(...):' yourself.
     2. OPTIMIZE: Use O(N) or O(N log N). Avoid O(N^2) unless N < 1000.
-    3. CLEAN OUTPUT: Return ONLY the code. No markdown, no "Here is the code".
-    4. BOILERPLATE: Do NOT define 'class ListNode' or 'class TreeNode'. Assume they exist.
-    5. OUTPUT FORMAT: JSON ONLY.
+    3. LOGIC HINT: For "Longest Balanced Subarray" problems involving distinct counts, consider Sliding Window or Two Pointers if N is large. Avoid complex state compression unless necessary.
+    4. ACCURACY: Double-check edge cases like empty arrays or single elements.
+    5. CLEAN OUTPUT: Return ONLY the code. No markdown, no "Here is the code".
+    6. BOILERPLATE: Do NOT define 'class ListNode' or 'class TreeNode'. Assume they exist.
+    7. OUTPUT FORMAT: JSON ONLY.
 
     INPUT CONTEXT:
     OS: ${osInfo}
