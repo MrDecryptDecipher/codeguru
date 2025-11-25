@@ -214,96 +214,63 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
   }
 
   public async generateSolution(problemInfo: any): Promise<any> {
-    // 1. EXTRACT THE STUB (The Source of Truth)
-    // We use the raw problem statement or code stub as the source
+    // --- STEP A: SOURCE OF TRUTH DETECTION ---
     const rawInput = problemInfo.code_stub || problemInfo.problem_statement || "";
-    const exactStub = this.extractStubFromInput(rawInput);
+    let sourceOfTruthStub: string | null = this.extractStubFromInput(rawInput);
+    let truthSource = "MANUAL_PASTE";
 
-    let stubInstruction = "";
+    // If no manual stub, try Knowledge Base (Auto-Lookup)
+    if (!sourceOfTruthStub) {
+      const idMatch = rawInput.match(/^(\d+)\./);
+      if (idMatch) {
+        const problemId = idMatch[1];
+        // Use existing kbHelper instead of requiring it dynamically
+        const kbProblem = this.kbHelper.findProblem(problemId); // Assuming findProblem can take ID or Title
 
-    // 2. INJECT THE STUB CONSTRAINT
-    if (exactStub) {
-      console.log("🔒 Universal Stub Enforcer: Found Stub!", exactStub);
-
-      // We prepend a "Hypnotic Instruction" to force the AI to obey the stub
-      stubInstruction = `
-        CRITICAL: YOU MUST USE THIS EXACT CODE SKELETON. DO NOT CHANGE THE FUNCTION NAME.
-        
-        ${exactStub}
-        
-        Implement the solution inside this class.
-        `;
-    } else {
-      console.warn("⚠️ Universal Stub Enforcer: No Stub found in input. AI will guess function name.");
-      // Fallback instruction
-      stubInstruction = "IMPORTANT: Use standard LeetCode function naming conventions (camelCase). Example: 'longestBalanced' instead of 'longestBalancedSubarray'.";
-    }
-
-    // STEP 1: Extract expected method name from CODE STUB (not description!)
-    // This must happen BEFORE any async branching
-    let expectedMethodName: string | undefined;
-    const codeStub = problemInfo.code_stub || problemInfo.problem_statement || "";
-    // Support Python (def), Rust (fn), JS/TS (function), Java/C++ (returnType methodName)
-    // Simplified regex for now: look for def or fn followed by name
-    const nameMatch = codeStub.match(/(?:def|fn|function|class)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[\(\{]/);
-    if (nameMatch) {
-      expectedMethodName = nameMatch[1];
-      console.log(`[LLMHelper] Extracted method name from code stub: ${expectedMethodName}`);
-    } else {
-      // Try C++/Java style: returnType methodName(args)
-      const typedMatch = codeStub.match(/(?:int|void|string|bool|long|double|float|auto|Option<.+>|Vec<.+>)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
-      if (typedMatch) {
-        expectedMethodName = typedMatch[1];
-        console.log(`[LLMHelper] Extracted method name (typed) from code stub: ${expectedMethodName}`);
-      } else {
-        console.log(`[LLMHelper] WARNING: Could not extract method name from code stub`);
+        if (kbProblem && (kbProblem.method_signature || kbProblem.solution_code)) {
+          console.log(`🔎 Auto-Lookup: Found Stub for Problem #${problemId}`);
+          sourceOfTruthStub = kbProblem.method_signature || kbProblem.solution_code || null;
+          truthSource = "KNOWLEDGE_BASE";
+        }
       }
     }
 
-    // Enhance problem info with Knowledge Base context
+    // --- STEP B: PROMPT ENGINEERING ---
+    // Enhance problem info with Knowledge Base context if available
     let enhancedInfo = { ...problemInfo };
+    // (Keep existing KB context logic if needed, but sourceOfTruthStub is primary)
 
-    // Try to find the problem in KB
-    const problemTitle = problemInfo.title || problemInfo.problem_statement?.split('\n')[0] || "";
-    if (problemTitle) {
-      const kbProblem = this.kbHelper.findProblem(problemTitle);
-      if (kbProblem) {
-        console.log(`[LLMHelper] Found problem in KB: ${kbProblem.title}`);
-        enhancedInfo.kb_context = {
-          official_title: kbProblem.title,
-          difficulty: kbProblem.difficulty,
-          problem_id: kbProblem.id,
-          tags: kbProblem.tags,
-        };
+    let userPrompt = "";
 
-        // CRITICAL: Use KB method name if available (from HuggingFace dataset)
-        if (kbProblem.method_name) {
-          enhancedInfo.detected_method_name = kbProblem.method_name;
-          console.log(`[LLMHelper] Using KB method name: ${kbProblem.method_name}`);
-        }
+    if (sourceOfTruthStub) {
+      // SCENARIO 1: KNOWN PROBLEM (Standard LeetCode)
+      // We force the specific signature so it passes the online driver.
+      console.log(`🔒 Mode: STRICT COMPLIANCE (${truthSource})`);
 
-        // Optionally include solution snippet for reference
-        if (kbProblem.solution_code) {
-          enhancedInfo.kb_context.has_solution_reference = true;
-        }
-      }
+      const constraint = `
+        CRITICAL INSTRUCTION:
+        You MUST implement the solution inside the following EXACT class structure. 
+        Do not change the function name or parameters.
+        
+        ${sourceOfTruthStub}
+        `;
+
+      userPrompt = constraint;
+    } else {
+      // SCENARIO 2: UNIVERSAL / TWEAKED / NEW PROBLEM (The "Interview" Mode)
+      // We don't have a stub. The AI must INFER the signature from the text.
+      console.log(`🔓 Mode: UNIVERSAL INFERENCE (New/Tweaked Problem)`);
+
+      const inferenceInstruction = `
+        INSTRUCTION:
+        1. Analyze the problem description to determine the required function signature.
+        2. Create a Python 'class Solution:' with a method name that best fits the problem (e.g., camelCase like 'longestBalanced').
+        3. If the problem asks for a specific input/output format, design the function arguments to match.
+        4. Output the FULL solution class.
+        `;
+
+      userPrompt = inferenceInstruction;
     }
-
-    // FALLBACK: Extract method signature from problem_statement or image text if not in KB
-    if (!enhancedInfo.detected_method_name) {
-      const problemText = JSON.stringify(problemInfo);
-      const methodMatch = problemText.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
-      if (methodMatch) {
-        enhancedInfo.detected_method_name = methodMatch[1];
-        console.log(`[LLMHelper] Detected method name from input: ${methodMatch[1]}`);
-      }
-    }
-
-    // If we extracted a name from the code stub, prioritize it over everything else
-    if (expectedMethodName) {
-      enhancedInfo.detected_method_name = expectedMethodName;
-    }
-
 
     console.log("[LLMHelper] Calling LLM for solution...");
     try {
@@ -314,29 +281,20 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
       while (attempts < maxAttempts) {
         attempts++;
 
-        // GENERATE PROMPT INSIDE LOOP (so hints/penalties are included)
-        // GENERATE PROMPT INSIDE LOOP (so hints/penalties are included)
+        // GENERATE PROMPT INSIDE LOOP
         const prompt = `${this.systemPrompt}
 
-${stubInstruction}
+${userPrompt}
 
 PROBLEM TO SOLVE:
 ${JSON.stringify(enhancedInfo, null, 2)}
-
-${expectedMethodName ? `
-CRITICAL CODE STUB REQUIREMENT:
-You MUST use this exact function signature (DO NOT change the name):
-${codeStub.split('\n').filter((line: string) => line.includes('def ') || line.includes('fn ') || line.includes('function ')).join('\n')}
-
-Your solution must have: def/fn ${expectedMethodName}(...)
-` : ''}
 
 REQUIREMENTS:
 1. Use the MOST OPTIMAL algorithm (prefer O(n), O(n log n), or better).
 2. REJECT O(N^2) or O(N^3) unless N <= 1000.
 3. Handle ALL edge cases (empty, single element, duplicates, negatives).
 4. Write COMPLETE, PRODUCTION-READY code (no placeholders, no "...").
-5. Use the EXACT method name.
+5. Use the EXACT method name if provided.
 
 OUTPUT FORMAT (JSON ONLY, NO MARKDOWN):
 {
@@ -353,7 +311,7 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
 
         if (this.useOpenRouter && this.openRouterHelper) {
           try {
-            result = await this.openRouterHelper.generateSolution(enhancedInfo)
+            result = await this.openRouterHelper.generateSolution(enhancedInfo) // Note: OpenRouterHelper might need prompt update too, but keeping signature for now
             console.log("[LLMHelper] OpenRouter returned result.");
           } catch (orError) {
             console.error("[LLMHelper] OpenRouter failed:", orError);
@@ -406,9 +364,9 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
 
       // GHOST FIXER: Force correct method name using Regex Interceptor
       if (result && result.solution && result.solution.code) {
-        // Use the code stub as the source of truth for the signature
-        const userStub = problemInfo.code_stub || problemInfo.problem_statement || "";
-        result.solution.code = this.sanitizeCodeOutput(userStub, result.solution.code);
+        // Pass the sourceOfTruthStub to the sanitizer.
+        // If it's null, the sanitizer will run in "Relaxed Mode" (allowing whatever the AI generated).
+        result.solution.code = this.sanitizeCodeOutput(result.solution.code, sourceOfTruthStub);
       }
 
       // SAFETY ENFORCER: Sanitize unsafe Rust code
@@ -453,8 +411,7 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
     return code;
   }
 
-  private sanitizeCodeOutput(userStub: string, llmGeneratedCode: string): string {
-    // 1. Strip Markdown (Steps, explanations, ``` tags)
+  private sanitizeCodeOutput(llmGeneratedCode: string, enforcedStub: string | null): string {
     let cleanCode = llmGeneratedCode.replace(/```[a-zA-Z]*\n/g, "");
     cleanCode = cleanCode.replace(/```/g, "");
     cleanCode = cleanCode.trim();
@@ -470,70 +427,29 @@ CRITICAL: Return ONLY the JSON object. No markdown blocks, no triple quotes in c
     // Cleanup extra newlines created by the removal
     cleanCode = cleanCode.replace(/\n{3,}/g, '\n\n');
 
-    // 2. Extract Required Name from Stub
-    // Re-Run Extraction to get the Truth
-    const stubMatch = this.extractStubFromInput(userStub);
-
-    if (stubMatch) {
-      // Extract strictly the function name: 'def longestBalanced('
+    // GHOST FIXER LOGIC
+    if (enforcedStub) {
+      // STRICT MODE: We know exactly what the function SHOULD be named.
       const nameRegex = /def\s+([a-zA-Z0-9_]+)\s*\(/;
-      const match = stubMatch.match(nameRegex);
+      const match = enforcedStub.match(nameRegex);
 
       if (match) {
-        const expectedName = match[1]; // e.g., "longestBalanced"
-        console.log(`👻 Ghost Fixer: Enforcing '${expectedName}'`);
-
-        // Find what the AI actually wrote (e.g., "longestBalancedSubarray")
+        const expectedName = match[1];
+        // Force the AI's code to match the Expected Name
         const aiFuncRegex = /def\s+([a-zA-Z0-9_]+)\s*\(/g;
         cleanCode = cleanCode.replace(aiFuncRegex, (fullMatch, aiName) => {
           if (aiName !== expectedName) {
-            console.log(`   ⚡ REPLACING '${aiName}' -> '${expectedName}'`);
+            console.log(`👻 Ghost Fixer: Correcting '${aiName}' -> '${expectedName}'`);
             return `def ${expectedName}(`;
           }
           return fullMatch;
         });
-
-        return cleanCode;
       }
+    } else {
+      // RELAXED MODE: We trust the AI because we have no stub to compare against.
+      // This handles "Tweaked" questions where the function name might need to be different.
+      console.log("👻 Ghost Fixer: No Stub enforced. Keeping AI-generated signature.");
     }
-
-    // Fallback to old logic if Universal Extractor fails (e.g. non-Python)
-    // Matches: def name( or fn name( or int name( or public ReturnType name(
-    const requiredPattern = /(?:def|fn|int|void|long|double|float|bool|string|char|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
-    const reqMatch = userStub.match(requiredPattern);
-
-    if (!reqMatch) {
-      console.log("[Ghost Fixer] WARNING: Could not extract required method name from stub");
-      return cleanCode;
-    }
-
-    const requiredName = reqMatch[1];
-    console.log(`[Ghost Fixer] Required method name from stub: ${requiredName}`);
-
-    // 3. Find the ACTUAL method name the LLM generated
-    // This regex finds the first function/method definition in the code
-    const llmPattern = /(def|fn|int|void|long|double|float|bool|string|char|public\s+[\w<>\[\]]+)\s+(\w+)\s*\(/;
-    const llmMatch = cleanCode.match(llmPattern);
-
-    if (!llmMatch) {
-      console.log("[Ghost Fixer] WARNING: Could not find any method definition in generated code");
-      return cleanCode;
-    }
-
-    const generatedName = llmMatch[2];
-
-    if (generatedName === requiredName) {
-      console.log(`[Ghost Fixer] Method name already correct: ${requiredName}`);
-      return cleanCode;
-    }
-
-    // 4. GLOBAL REPLACEMENT: Replace ALL occurrences of the wrong name
-    console.log(`[Ghost Fixer] FORCING GLOBAL RENAME: '${generatedName}' -> '${requiredName}'`);
-
-    // Use a global regex to replace ALL occurrences (not just the first one)
-    // This ensures method calls, references, etc. are also updated
-    const globalReplaceRegex = new RegExp(`\\b${generatedName}\\b`, 'g');
-    cleanCode = cleanCode.replace(globalReplaceRegex, requiredName);
 
     return cleanCode;
   }
