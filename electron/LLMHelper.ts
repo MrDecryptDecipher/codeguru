@@ -323,10 +323,10 @@ export class LLMHelper {
 
     // --- PYTHON SPECIFIC FIXES ---
     if (language === "python") {
-      // Fix: Remove __init__ with arguments from Solution class
-      // Replaces "def __init__(self, head):" with "def __init__(self): pass # Args removed"
-      // This prevents "missing argument" errors during instantiation.
-      cleanCode = cleanCode.replace(/def\s+__init__\s*\(\s*self\s*,\s*[^)]+\s*\)\s*:/g, 'def __init__(self): pass # Arguments removed by Ghost Fixer');
+      // Fix: Rename __init__ to __fake_init__ to prevent "missing argument" errors.
+      // The driver instantiates Solution() without args. If the AI adds args to __init__, it crashes.
+      // Renaming it disables the constructor but keeps the body valid (as a normal method), preventing IndentationErrors.
+      cleanCode = cleanCode.replace(/def\s+__init__/g, 'def __fake_init__');
     }
 
     // --- UNIVERSAL GHOST FIXER ---
