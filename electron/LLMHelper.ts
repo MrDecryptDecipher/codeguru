@@ -116,6 +116,36 @@ export class LLMHelper {
     return match ? match[1] : null;
   }
 
+  // 2. The Direct Call Method
+  private async callGeminiDirect(systemPrompt: string, userPrompt: string): Promise<string> {
+    try {
+      console.log("💎 Switching to Gemini 3 Pro Preview (Google AI Studio)...");
+
+      const apiKey = this.geminiApiKey || process.env.GOOGLE_API_KEY || "";
+      if (!apiKey) {
+        throw new Error("No Google API Key available for Gemini Direct fallback");
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+
+      // SPECIFIC MODEL ID: gemini-exp-1121 (November 2024 Preview)
+      const model = genAI.getGenerativeModel(
+        { model: "gemini-exp-1121" },
+        { apiVersion: "v1beta" } as any
+      );
+
+      const result = await model.generateContent(
+        systemPrompt + "\n\n" + userPrompt
+      );
+
+      return result.response.text();
+    } catch (error) {
+      console.error("Gemini 3 Direct Error:", error);
+      throw error;
+    }
+  }
+
+
   public async generateSolution(prompt: string | any, ...args: any[]): Promise<any> {
     try {
       // RE-ADAPTING TO EXISTING SIGNATURE to avoid breaking callsites
@@ -213,7 +243,22 @@ CRITICAL: Return ONLY the JSON object.No markdown blocks.`;
             result = await this.openRouterHelper.generateSolution(constrainedInfo);
             console.log("[LLMHelper] OpenRouter returned result.");
           } catch (orError) {
-            throw orError;
+            console.warn("⚠️ Swarm Depleted. Engaging THE BOSS (Gemini 3 Pro)...");
+            try {
+              // Fallback to Gemini Direct
+              // We split the fullPrompt to separate system instructions if possible, or just pass it all.
+              // callGeminiDirect takes (systemPrompt, userPrompt) and joins them.
+              // We'll pass the system prompt and the rest of the prompt.
+              const systemPrompt = this.getSystemPrompt(process.platform);
+              const userPart = fullPrompt.replace(systemPrompt, "").trim();
+
+              const geminiText = await this.callGeminiDirect(systemPrompt, userPart);
+              const cleanedText = this.cleanJsonResponse(geminiText);
+              result = JSON.parse(cleanedText);
+            } catch (geminiError) {
+              console.error("Gemini Fallback Failed:", geminiError);
+              throw orError; // Throw the original error if fallback also fails
+            }
           }
         } else if (this.model) {
           const genResult = await this.model.generateContent(fullPrompt)
